@@ -1,13 +1,30 @@
-import React from 'react';
-import {ScrollView, View, Text, Switch, TouchableOpacity, StyleSheet} from 'react-native';
+import React, {useCallback, useEffect, useState} from 'react';
+import {ScrollView, View, Text, Switch, TouchableOpacity, StyleSheet, AppState} from 'react-native';
 import {useSettings} from '../hooks/useSettings';
 import {ListItem} from '../components/ListItem';
 import {SectionHeader} from '../components/SectionHeader';
+import {AlertIcn, CheckCircleIcn} from '../components/Icons';
+import {PrinterBridge} from '../services/PrinterBridge';
 import type {PaperWidth} from '../types/printer';
 import {PAPER_WIDTHS} from '../utils/constants';
 
 export function SettingsScreen() {
   const {settings, loading, updateSettings} = useSettings();
+  const [serviceEnabled, setServiceEnabled] = useState<boolean | null>(null);
+
+  const checkService = useCallback(() => {
+    PrinterBridge.isPrintServiceEnabled().then(setServiceEnabled).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    checkService();
+    const sub = AppState.addEventListener('change', state => {
+      if (state === 'active') {
+        checkService();
+      }
+    });
+    return () => sub.remove();
+  }, [checkService]);
 
   if (loading) {
     return <View style={styles.loading} />;
@@ -15,6 +32,38 @@ export function SettingsScreen() {
 
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+      {/* Print Service */}
+      <SectionHeader title="Print Service" />
+      <View style={styles.section}>
+        <View style={styles.serviceRow}>
+          <View style={styles.serviceInfo}>
+            {serviceEnabled ? (
+              <CheckCircleIcn size={20} color="#16a34a" />
+            ) : (
+              <AlertIcn size={20} color="#d97706" />
+            )}
+            <View style={styles.serviceText}>
+              <Text style={styles.serviceTitle}>
+                {serviceEnabled ? 'AkPrint is enabled' : 'AkPrint is not enabled'}
+              </Text>
+              {!serviceEnabled && (
+                <Text style={styles.serviceDesc}>
+                  Enable AkPrint in Android print settings to print from any app
+                </Text>
+              )}
+            </View>
+          </View>
+          {!serviceEnabled && (
+            <TouchableOpacity
+              style={styles.serviceBtn}
+              onPress={() => PrinterBridge.openPrintServiceSettings()}
+              activeOpacity={0.7}>
+              <Text style={styles.serviceBtnText}>Enable</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+
       {/* Print Defaults */}
       <SectionHeader title="Print Defaults" />
       <View style={styles.section}>
@@ -158,6 +207,43 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderRadius: 10,
     overflow: 'hidden',
+  },
+  serviceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+  },
+  serviceInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  serviceText: {
+    marginLeft: 10,
+    flex: 1,
+  },
+  serviceTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  serviceDesc: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginTop: 2,
+  },
+  serviceBtn: {
+    backgroundColor: '#2563eb',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginLeft: 12,
+  },
+  serviceBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#ffffff',
   },
   row: {
     flexDirection: 'row',
