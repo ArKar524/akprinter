@@ -7,6 +7,16 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
+import {HugeiconsIcon} from '@hugeicons/react-native';
+import {
+  PrinterIcon,
+  Settings02Icon,
+  WorkHistoryIcon,
+  FileTextIcon,
+  CheckmarkCircle02Icon,
+  Cancel01Icon,
+} from '@hugeicons/core-free-icons';
+import type {IconSvgElement} from '@hugeicons/core-free-icons';
 import type {HomeNavProp} from '../navigation/types';
 import {usePrinters} from '../hooks/usePrinters';
 import {usePrintHistory} from '../hooks/usePrintHistory';
@@ -52,23 +62,27 @@ export function HomeScreen() {
       <View style={styles.actionsRow}>
         <QuickAction
           label="Printers"
-          emoji="🖨️"
+          icon={PrinterIcon}
+          color="#2563eb"
           onPress={() => navigation.navigate('PrintersList')}
           badge={printers.length > 0 ? String(printers.length) : undefined}
         />
         <QuickAction
           label="Settings"
-          emoji="⚙️"
+          icon={Settings02Icon}
+          color="#6b7280"
           onPress={() => navigation.navigate('Settings')}
         />
         <QuickAction
           label="History"
-          emoji="📋"
+          icon={WorkHistoryIcon}
+          color="#d97706"
           onPress={() => navigation.navigate('PrintHistory')}
         />
         <QuickAction
           label="Logs"
-          emoji="📄"
+          icon={FileTextIcon}
+          color="#16a34a"
           onPress={() => navigation.navigate('Logs')}
         />
       </View>
@@ -87,8 +101,12 @@ export function HomeScreen() {
           <View style={styles.section}>
             {recentHistory.map(entry => (
               <View key={entry.id} style={styles.historyRow}>
-                <View style={styles.historyLeft}>
-                  <Text style={styles.historyIcon}>{entry.success ? '✓' : '✗'}</Text>
+                <View style={[styles.historyLeft, {backgroundColor: entry.success ? '#dcfce7' : '#fee2e2'}]}>
+                  <HugeiconsIcon
+                    icon={entry.success ? CheckmarkCircle02Icon : Cancel01Icon}
+                    size={16}
+                    color={entry.success ? '#16a34a' : '#dc2626'}
+                  />
                 </View>
                 <View style={styles.historyInfo}>
                   <Text style={styles.historyPrinter} numberOfLines={1}>
@@ -113,19 +131,21 @@ export function HomeScreen() {
 
 function QuickAction({
   label,
-  emoji,
+  icon,
+  color,
   onPress,
   badge,
 }: {
   label: string;
-  emoji: string;
+  icon: IconSvgElement;
+  color: string;
   onPress: () => void;
   badge?: string;
 }) {
   return (
     <TouchableOpacity style={styles.action} onPress={onPress} activeOpacity={0.7}>
       <View style={styles.actionIcon}>
-        <Text style={styles.actionEmoji}>{emoji}</Text>
+        <HugeiconsIcon icon={icon} size={26} color={color} />
         {badge && (
           <View style={styles.badge}>
             <Text style={styles.badgeText}>{badge}</Text>
@@ -176,9 +196,6 @@ const styles = StyleSheet.create({
     position: 'relative',
     marginBottom: 6,
   },
-  actionEmoji: {
-    fontSize: 26,
-  },
   actionLabel: {
     fontSize: 12,
     color: '#374151',
@@ -216,13 +233,9 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#f3f4f6',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
-  },
-  historyIcon: {
-    fontSize: 14,
   },
   historyInfo: {
     flex: 1,

@@ -7,6 +7,8 @@ import {
   StyleSheet,
   Alert,
 } from 'react-native';
+import {HugeiconsIcon} from '@hugeicons/react-native';
+import {FileTextIcon} from '@hugeicons/core-free-icons';
 import {useLogs} from '../hooks/useLogs';
 import {EmptyState} from '../components/EmptyState';
 import {formatDate} from '../utils/formatters';
@@ -83,7 +85,7 @@ export function LogsScreen() {
         }
         ListEmptyComponent={
           loading ? null : (
-            <EmptyState icon="📄" message="No log entries to display." />
+            <EmptyState icon={<HugeiconsIcon icon={FileTextIcon} size={48} color="#9ca3af" />} message="No log entries to display." />
           )
         }
         refreshing={loading}

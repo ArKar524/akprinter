@@ -1,5 +1,7 @@
 import React from 'react';
 import {TouchableOpacity, View, Text, StyleSheet} from 'react-native';
+import {HugeiconsIcon} from '@hugeicons/react-native';
+import {BluetoothIcon, WifiIcon} from '@hugeicons/core-free-icons';
 import type {Printer, PrinterStatus} from '../types/printer';
 import {StatusBadge} from './StatusBadge';
 
@@ -10,12 +12,12 @@ interface PrinterCardProps {
 }
 
 export function PrinterCard({printer, status = 'unknown', onPress}: PrinterCardProps) {
-  const icon = printer.type === 'bluetooth' ? 'BT' : 'IP';
+  const icon = printer.type === 'bluetooth' ? BluetoothIcon : WifiIcon;
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7}>
       <View style={styles.iconContainer}>
-        <Text style={styles.icon}>{icon}</Text>
+        <HugeiconsIcon icon={icon} size={20} color="#2563eb" />
       </View>
       <View style={styles.info}>
         <View style={styles.nameRow}>
@@ -62,11 +64,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
-  },
-  icon: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#2563eb',
   },
   info: {
     flex: 1,

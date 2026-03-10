@@ -1,9 +1,10 @@
 import React from 'react';
-import {View, Text, StyleSheet} from 'react-native';
+import {View, StyleSheet} from 'react-native';
+import {Text} from 'react-native';
 import {Button} from './Button';
 
 interface EmptyStateProps {
-  icon: string;
+  icon: React.ReactNode;
   message: string;
   actionLabel?: string;
   onAction?: () => void;
@@ -12,7 +13,7 @@ interface EmptyStateProps {
 export function EmptyState({icon, message, actionLabel, onAction}: EmptyStateProps) {
   return (
     <View style={styles.container}>
-      <Text style={styles.icon}>{icon}</Text>
+      <View style={styles.iconWrap}>{icon}</View>
       <Text style={styles.message}>{message}</Text>
       {actionLabel && onAction && (
         <Button
@@ -33,8 +34,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 32,
   },
-  icon: {
-    fontSize: 48,
+  iconWrap: {
     marginBottom: 16,
   },
   message: {

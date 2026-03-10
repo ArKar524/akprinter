@@ -10,6 +10,8 @@
     "test": "jest"
   },
   "dependencies": {
+    "@hugeicons/core-free-icons": "^4.0.0",
+    "@hugeicons/react-native": "^1.0.13",
     "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-navigation/native": "^7.1.33",
     "@react-navigation/native-stack": "^7.14.4",
