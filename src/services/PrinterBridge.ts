@@ -1,7 +1,7 @@
 import {NativeModules, NativeEventEmitter} from 'react-native';
 import type {BluetoothDevice, Printer, PrinterStatus} from '../types/printer';
 import type {AppSettings} from '../types/settings';
-import type {LogEntry, PrintHistoryEntry} from '../types/logs';
+import type {LogEntry, PendingJob, PrintHistoryEntry} from '../types/logs';
 
 const {PrinterModule} = NativeModules;
 const emitter = new NativeEventEmitter(PrinterModule);
@@ -82,6 +82,18 @@ export const PrinterBridge = {
     return PrinterModule.openPrintServiceSettings();
   },
 
+  getPendingJobs(): Promise<PendingJob[]> {
+    return PrinterModule.getPendingJobs();
+  },
+
+  deletePendingJob(jobId: string): Promise<void> {
+    return PrinterModule.deletePendingJob(jobId);
+  },
+
+  printPendingJob(jobId: string, printerId: string): Promise<void> {
+    return PrinterModule.printPendingJob(jobId, printerId);
+  },
+
   onPrintJobStarted(
     callback: (data: {jobId: string; printerName: string}) => void,
   ) {
@@ -109,5 +121,9 @@ export const PrinterBridge = {
     callback: (data: {printerId: string; status: PrinterStatus}) => void,
   ) {
     return emitter.addListener('PrinterStatusChanged', callback);
+  },
+
+  onPendingJobAdded(callback: (data: {jobId: string}) => void) {
+    return emitter.addListener('PendingJobAdded', callback);
   },
 };

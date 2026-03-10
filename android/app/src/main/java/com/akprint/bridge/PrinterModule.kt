@@ -360,6 +360,56 @@ class PrinterModule(reactContext: ReactApplicationContext) :
         }
     }
 
+    // --- Pending Jobs ---
+
+    @ReactMethod
+    fun getPendingJobs(promise: Promise) {
+        try {
+            val jobs = PrintJobProcessor.getPendingJobs(reactApplicationContext)
+            promise.resolve(jsonArrayToWritableArray(jobs))
+        } catch (e: Exception) {
+            promise.reject("GET_PENDING_ERROR", e.message, e)
+        }
+    }
+
+    @ReactMethod
+    fun deletePendingJob(jobId: String, promise: Promise) {
+        try {
+            PrintJobProcessor.deletePendingJob(reactApplicationContext, jobId)
+            promise.resolve(null)
+        } catch (e: Exception) {
+            promise.reject("DELETE_PENDING_ERROR", e.message, e)
+        }
+    }
+
+    @ReactMethod
+    fun printPendingJob(jobId: String, printerId: String, promise: Promise) {
+        scope.launch {
+            try {
+                val printers = PrintJobProcessor.loadPrinters(reactApplicationContext)
+                var printerData: JSONObject? = null
+                for (i in 0 until printers.length()) {
+                    val p = printers.getJSONObject(i)
+                    if (p.getString("id") == printerId) { printerData = p; break }
+                }
+                if (printerData == null) {
+                    promise.reject("NOT_FOUND", "Printer not found")
+                    return@launch
+                }
+                val settings = PrintJobProcessor.loadSettings(reactApplicationContext)
+                val success = PrintJobProcessor.printPendingJob(reactApplicationContext, jobId, printerData, settings)
+                if (success) {
+                    PrintJobProcessor.appendLog(reactApplicationContext, "info", "Pending job printed: $jobId", printerId)
+                    promise.resolve(null)
+                } else {
+                    promise.reject("PRINT_FAIL", "Failed to print pending job")
+                }
+            } catch (e: Exception) {
+                promise.reject("PRINT_PENDING_ERROR", e.message, e)
+            }
+        }
+    }
+
     // --- Status Check ---
 
     @ReactMethod

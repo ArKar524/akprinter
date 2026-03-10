@@ -10,6 +10,10 @@ import com.akprint.drivers.LanEscPosDriver
 import com.akprint.escpos.EscPosConverter
 import org.json.JSONArray
 import org.json.JSONObject
+import android.os.ParcelFileDescriptor
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -230,5 +234,106 @@ object PrintJobProcessor {
     private fun emitEvent(context: Context, eventName: String, data: JSONObject) {
         // Events are emitted via a static reference set by PrinterModule
         AkPrintService.pendingEvents.add(Pair(eventName, data))
+    }
+
+    // --- Pending Jobs ---
+
+    fun savePendingJob(context: Context, printJob: PrintJob): Boolean {
+        val jobId = UUID.randomUUID().toString()
+        val pendingDir = File(context.filesDir, "pending_jobs")
+        if (!pendingDir.exists()) pendingDir.mkdirs()
+
+        val pdfFile = File(pendingDir, "$jobId.pdf")
+
+        val pfd = printJob.document.data ?: return false
+        try {
+            FileInputStream(pfd.fileDescriptor).use { input ->
+                FileOutputStream(pdfFile).use { output ->
+                    input.copyTo(output)
+                }
+            }
+        } finally {
+            pfd.close()
+        }
+
+        val pageCount = printJob.document.info?.pageCount ?: 0
+        val documentName = printJob.info.label ?: "Untitled"
+
+        val metadata = JSONObject().apply {
+            put("id", jobId)
+            put("documentName", documentName)
+            put("pageCount", pageCount)
+            put("createdAt", SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).format(Date()))
+            put("status", "pending")
+        }
+
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val jobsJson = prefs.getString("pending_jobs", "[]") ?: "[]"
+        val jobs = JSONArray(jobsJson)
+        jobs.put(metadata)
+        prefs.edit().putString("pending_jobs", jobs.toString()).apply()
+
+        return true
+    }
+
+    fun getPendingJobs(context: Context): JSONArray {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val jobsJson = prefs.getString("pending_jobs", "[]") ?: "[]"
+        return JSONArray(jobsJson)
+    }
+
+    fun deletePendingJob(context: Context, jobId: String) {
+        // Delete the PDF file
+        val pdfFile = File(context.filesDir, "pending_jobs/$jobId.pdf")
+        if (pdfFile.exists()) pdfFile.delete()
+
+        // Remove from SharedPreferences
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val jobsJson = prefs.getString("pending_jobs", "[]") ?: "[]"
+        val jobs = JSONArray(jobsJson)
+        val filtered = JSONArray()
+        for (i in 0 until jobs.length()) {
+            val job = jobs.getJSONObject(i)
+            if (job.getString("id") != jobId) filtered.put(job)
+        }
+        prefs.edit().putString("pending_jobs", filtered.toString()).apply()
+    }
+
+    fun printPendingJob(context: Context, jobId: String, printerData: JSONObject, settings: JSONObject): Boolean {
+        val pdfFile = File(context.filesDir, "pending_jobs/$jobId.pdf")
+        if (!pdfFile.exists()) throw IllegalStateException("PDF file not found for job: $jobId")
+
+        val pfd = ParcelFileDescriptor.open(pdfFile, ParcelFileDescriptor.MODE_READ_ONLY)
+        val escPosData: ByteArray
+        try {
+            val paperWidth = printerData.optInt("paperWidth", settings.optInt("paperWidth", 80))
+            val copies = settings.optInt("copies", 1)
+            val autoCut = settings.optBoolean("autoCut", true)
+            val openCashDrawer = settings.optBoolean("openCashDrawer", false)
+
+            escPosData = EscPosConverter.pdfToEscPos(
+                pfd = pfd,
+                paperWidthMm = paperWidth,
+                copies = copies,
+                autoCut = autoCut,
+                openCashDrawer = openCashDrawer
+            )
+        } finally {
+            pfd.close()
+        }
+
+        val driver = buildDriver(printerData)
+        if (!driver.connect()) throw IllegalStateException("Could not connect to printer")
+
+        try {
+            val sendOk = driver.send(escPosData)
+            if (sendOk) {
+                deletePendingJob(context, jobId)
+                return true
+            }
+            return false
+        } finally {
+            driver.disconnect()
+        }
     }
 }

@@ -7,6 +7,7 @@ export type RootStackParamList = {
   AddBluetoothPrinter: undefined;
   AddLanPrinter: undefined;
   PrinterDetail: {printerId: string};
+  PendingJobs: undefined;
   Settings: undefined;
   Logs: undefined;
   PrintHistory: undefined;

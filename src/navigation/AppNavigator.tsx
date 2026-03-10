@@ -10,6 +10,7 @@ import {PrinterDetailScreen} from '../screens/PrinterDetailScreen';
 import {SettingsScreen} from '../screens/SettingsScreen';
 import {LogsScreen} from '../screens/LogsScreen';
 import {PrintHistoryScreen} from '../screens/PrintHistoryScreen';
+import {PendingJobsScreen} from '../screens/PendingJobsScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -45,6 +46,11 @@ export function AppNavigator() {
           name="PrinterDetail"
           component={PrinterDetailScreen}
           options={{title: 'Printer'}}
+        />
+        <Stack.Screen
+          name="PendingJobs"
+          component={PendingJobsScreen}
+          options={{title: 'Pending Jobs'}}
         />
         <Stack.Screen
           name="Settings"

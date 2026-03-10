@@ -14,7 +14,7 @@ import {usePrintHistory} from '../hooks/usePrintHistory';
 import {usePrinterStatus} from '../hooks/usePrinterStatus';
 import {PrinterCard} from '../components/PrinterCard';
 import {SectionHeader} from '../components/SectionHeader';
-import {PrinterIcn, SettingsIcn, HistoryIcn, FileIcn, CheckCircleIcn, CancelIcn, AlertIcn} from '../components/Icons';
+import {PrinterIcn, SettingsIcn, HistoryIcn, FileIcn, CheckCircleIcn, CancelIcn, AlertIcn, QueueIcn} from '../components/Icons';
 import {PrinterBridge} from '../services/PrinterBridge';
 import {formatDate, formatDuration} from '../utils/formatters';
 
@@ -24,25 +24,37 @@ export function HomeScreen() {
   const {history} = usePrintHistory();
   const {status} = usePrinterStatus(defaultPrinter?.id ?? null);
   const [printServiceEnabled, setPrintServiceEnabled] = useState<boolean | null>(null);
+  const [pendingCount, setPendingCount] = useState(0);
 
   const checkPrintService = useCallback(() => {
     PrinterBridge.isPrintServiceEnabled().then(setPrintServiceEnabled).catch(() => {});
   }, []);
 
+  const loadPendingCount = useCallback(() => {
+    PrinterBridge.getPendingJobs().then(jobs => setPendingCount(jobs.length)).catch(() => {});
+  }, []);
+
   useEffect(() => {
     checkPrintService();
+    loadPendingCount();
     const sub = AppState.addEventListener('change', state => {
       if (state === 'active') {
         checkPrintService();
+        loadPendingCount();
       }
     });
     return () => sub.remove();
-  }, [checkPrintService]);
+  }, [checkPrintService, loadPendingCount]);
 
   useEffect(() => {
     const sub = PrinterBridge.onPrintJobCompleted(() => refresh());
     return () => sub.remove();
   }, [refresh]);
+
+  useEffect(() => {
+    const sub = PrinterBridge.onPendingJobAdded(() => loadPendingCount());
+    return () => sub.remove();
+  }, [loadPendingCount]);
 
   const recentHistory = history.slice(0, 3);
 
@@ -84,6 +96,12 @@ export function HomeScreen() {
       <SectionHeader title="Quick Actions" />
       <View style={styles.actionsRow}>
         <QuickAction
+          label="Pending"
+          icon={<QueueIcn size={26} color="#7c3aed" />}
+          onPress={() => navigation.navigate('PendingJobs')}
+          badge={pendingCount > 0 ? String(pendingCount) : undefined}
+        />
+        <QuickAction
           label="Printers"
           icon={<PrinterIcn size={26} color="#2563eb" />}
           onPress={() => navigation.navigate('PrintersList')}
@@ -98,11 +116,6 @@ export function HomeScreen() {
           label="History"
           icon={<HistoryIcn size={26} color="#d97706" />}
           onPress={() => navigation.navigate('PrintHistory')}
-        />
-        <QuickAction
-          label="Logs"
-          icon={<FileIcn size={26} color="#16a34a" />}
-          onPress={() => navigation.navigate('Logs')}
         />
       </View>
 

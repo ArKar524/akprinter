@@ -11,6 +11,14 @@ export interface LogEntry {
   jobId?: string;
 }
 
+export interface PendingJob {
+  id: string;
+  documentName: string;
+  pageCount: number;
+  createdAt: string;
+  status: 'pending' | 'printing';
+}
+
 export interface PrintHistoryEntry {
   id: string;
   timestamp: string;
