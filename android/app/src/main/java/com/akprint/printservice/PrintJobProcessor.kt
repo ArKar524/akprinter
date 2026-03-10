@@ -56,23 +56,27 @@ object PrintJobProcessor {
                 return
             }
 
-            val paperWidth = printerData.optInt("paperWidth", settings.optInt("paperWidth", 80))
-            val copies = printJob.info.copies.coerceAtLeast(1).let {
-                if (it == 1) settings.optInt("copies", 1) else it
-            }
-            val autoCut = settings.optBoolean("autoCut", true)
-            val openCashDrawer = settings.optBoolean("openCashDrawer", false)
+            val escPosData: ByteArray
+            try {
+                val paperWidth = printerData.optInt("paperWidth", settings.optInt("paperWidth", 80))
+                val copies = printJob.info.copies.coerceAtLeast(1).let {
+                    if (it == 1) settings.optInt("copies", 1) else it
+                }
+                val autoCut = settings.optBoolean("autoCut", true)
+                val openCashDrawer = settings.optBoolean("openCashDrawer", false)
 
-            val escPosData = EscPosConverter.pdfToEscPos(
-                pfd = pfd,
-                paperWidthMm = paperWidth,
-                copies = copies,
-                autoCut = autoCut,
-                openCashDrawer = openCashDrawer
-            )
+                escPosData = EscPosConverter.pdfToEscPos(
+                    pfd = pfd,
+                    paperWidthMm = paperWidth,
+                    copies = copies,
+                    autoCut = autoCut,
+                    openCashDrawer = openCashDrawer
+                )
+            } finally {
+                pfd.close()
+            }
 
             val sendOk = driver.send(escPosData)
-            pfd.close()
 
             if (sendOk) {
                 printJob.complete()

@@ -3,4 +3,5 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:vendor="AkPrint"
     android:icon="@mipmap/ic_launcher"
-    android:settingsActivity="com.akprint.MainActivity" />
+    android:settingsActivity="com.akprint.MainActivity"
+    android:addPrintersActivity="com.akprint.MainActivity" />

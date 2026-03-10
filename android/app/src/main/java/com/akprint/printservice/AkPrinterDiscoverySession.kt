@@ -25,7 +25,7 @@ class AkPrinterDiscoverySession(
     override fun onStartPrinterDiscovery(priorityList: MutableList<PrinterId>) {
         Log.d(TAG, "onStartPrinterDiscovery")
         val printers = PrintJobProcessor.loadPrinters(service)
-        val printerInfoList = buildPrinterInfoList(printers, withCapabilities = false)
+        val printerInfoList = buildPrinterInfoList(printers, withCapabilities = true)
         addPrinters(printerInfoList)
     }
 
@@ -35,6 +35,13 @@ class AkPrinterDiscoverySession(
 
     override fun onValidatePrinters(printerIds: MutableList<PrinterId>) {
         Log.d(TAG, "onValidatePrinters: ${printerIds.size}")
+        val printers = PrintJobProcessor.loadPrinters(service)
+        val result = mutableListOf<PrinterInfo>()
+        for (pid in printerIds) {
+            val data = findPrinterData(printers, pid.localId) ?: continue
+            result.add(buildPrinterInfo(pid, data, PrinterInfo.STATUS_IDLE, withCapabilities = true))
+        }
+        if (result.isNotEmpty()) addPrinters(result)
     }
 
     override fun onStartPrinterStateTracking(printerId: PrinterId) {
