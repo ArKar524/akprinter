@@ -45,7 +45,6 @@ object PrintJobProcessor {
         }
 
         try {
-            printJob.start()
             emitEvent(context, "PrintJobStarted", JSONObject().apply {
                 put("jobId", printJob.id.toString())
                 put("printerName", printerData.optString("name"))
