@@ -8,7 +8,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
-import android.print.PrintManager
 import android.provider.Settings
 import android.util.Log
 import com.akprint.drivers.BluetoothEscPosDriver
@@ -398,15 +397,11 @@ class PrinterModule(reactContext: ReactApplicationContext) :
     @ReactMethod
     fun isPrintServiceEnabled(promise: Promise) {
         try {
-            val printManager = reactApplicationContext.getSystemService(Context.PRINT_SERVICE) as? PrintManager
-            if (printManager == null) {
-                promise.resolve(false)
-                return
-            }
-            val enabledServices = printManager.printServices
-            val isEnabled = enabledServices?.any {
-                it.id.flattenToString().startsWith("com.akprint/")
-            } ?: false
+            val enabledServices = Settings.Secure.getString(
+                reactApplicationContext.contentResolver,
+                "enabled_print_services"
+            ) ?: ""
+            val isEnabled = enabledServices.contains("com.akprint/")
             promise.resolve(isEnabled)
         } catch (e: Exception) {
             Log.w(TAG, "Failed to check print service status", e)
