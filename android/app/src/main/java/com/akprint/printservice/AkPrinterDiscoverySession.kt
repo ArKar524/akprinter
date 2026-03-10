@@ -6,8 +6,6 @@ import android.print.PrinterId
 import android.print.PrinterInfo
 import android.printservice.PrinterDiscoverySession
 import android.util.Log
-import com.akprint.drivers.BluetoothEscPosDriver
-import com.akprint.drivers.LanEscPosDriver
 import kotlinx.coroutines.*
 import org.json.JSONArray
 
@@ -20,51 +18,89 @@ class AkPrinterDiscoverySession(
     }
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    private var trackingJob: Job? = null
+
+    // Track multiple printers simultaneously — keyed by localId
+    private val trackingJobs = mutableMapOf<String, Job>()
 
     override fun onStartPrinterDiscovery(priorityList: MutableList<PrinterId>) {
-        Log.d(TAG, "onStartPrinterDiscovery")
+        Log.d(TAG, "onStartPrinterDiscovery, priorityList=${priorityList.size}")
         val printers = PrintJobProcessor.loadPrinters(service)
-        val printerInfoList = buildPrinterInfoList(printers, withCapabilities = true)
-        addPrinters(printerInfoList)
+
+        // Report priority printers first (ones the system wants us to find quickly)
+        if (priorityList.isNotEmpty()) {
+            val priorityIds = priorityList.map { it.localId }.toSet()
+            val priorityInfoList = mutableListOf<PrinterInfo>()
+            for (i in 0 until printers.length()) {
+                val p = printers.getJSONObject(i)
+                if (p.getString("id") in priorityIds) {
+                    val printerId = service.generatePrinterId(p.getString("id"))
+                    priorityInfoList.add(buildPrinterInfo(printerId, p, PrinterInfo.STATUS_IDLE, withCapabilities = true))
+                }
+            }
+            if (priorityInfoList.isNotEmpty()) {
+                addPrinters(priorityInfoList)
+            }
+        }
+
+        // Then report all printers
+        val allPrinterInfoList = buildPrinterInfoList(printers, withCapabilities = true)
+        if (allPrinterInfoList.isNotEmpty()) {
+            addPrinters(allPrinterInfoList)
+        }
     }
 
     override fun onStopPrinterDiscovery() {
         Log.d(TAG, "onStopPrinterDiscovery")
+        // No ongoing discovery tasks to stop for our static list approach
     }
 
     override fun onValidatePrinters(printerIds: MutableList<PrinterId>) {
         Log.d(TAG, "onValidatePrinters: ${printerIds.size}")
+        // Validate printers by checking if they still exist in our registry
         val printers = PrintJobProcessor.loadPrinters(service)
         val result = mutableListOf<PrinterInfo>()
         for (pid in printerIds) {
-            val data = findPrinterData(printers, pid.localId) ?: continue
-            result.add(buildPrinterInfo(pid, data, PrinterInfo.STATUS_IDLE, withCapabilities = true))
+            val data = findPrinterData(printers, pid.localId)
+            if (data != null) {
+                result.add(buildPrinterInfo(pid, data, PrinterInfo.STATUS_IDLE, withCapabilities = true))
+            }
+            // Printers not found are implicitly invalid — not added to the list
         }
         if (result.isNotEmpty()) addPrinters(result)
     }
 
     override fun onStartPrinterStateTracking(printerId: PrinterId) {
         Log.d(TAG, "onStartPrinterStateTracking: ${printerId.localId}")
-        trackingJob?.cancel()
-        trackingJob = scope.launch {
-            val printers = PrintJobProcessor.loadPrinters(service)
-            val printerData = findPrinterData(printers, printerId.localId) ?: return@launch
+        val localId = printerId.localId
 
-            // Build full capabilities for the tracked printer
-            val info = buildPrinterInfoWithCapabilities(printerId, printerData)
+        // Cancel existing tracking for this printer if any
+        trackingJobs[localId]?.cancel()
+
+        trackingJobs[localId] = scope.launch {
+            val printers = PrintJobProcessor.loadPrinters(service)
+            val printerData = findPrinterData(printers, localId) ?: return@launch
+
+            // Immediately report printer with capabilities (status IDLE as placeholder)
+            val initialInfo = buildPrinterInfo(printerId, printerData, PrinterInfo.STATUS_IDLE, withCapabilities = true)
             withContext(Dispatchers.Main) {
-                addPrinters(listOf(info))
+                addPrinters(listOf(initialInfo))
             }
 
-            // Probe connection status
+            // Probe actual connection status
             val driver = PrintJobProcessor.buildDriver(printerData)
-            val status = if (driver.connect()) {
-                driver.disconnect()
-                PrinterInfo.STATUS_IDLE
-            } else {
+            val status = try {
+                if (driver.connect()) {
+                    driver.disconnect()
+                    PrinterInfo.STATUS_IDLE
+                } else {
+                    PrinterInfo.STATUS_UNAVAILABLE
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Probe failed for ${printerId.localId}", e)
                 PrinterInfo.STATUS_UNAVAILABLE
             }
+
+            ensureActive()
 
             val updatedInfo = buildPrinterInfo(printerId, printerData, status, withCapabilities = true)
             withContext(Dispatchers.Main) {
@@ -75,12 +111,13 @@ class AkPrinterDiscoverySession(
 
     override fun onStopPrinterStateTracking(printerId: PrinterId) {
         Log.d(TAG, "onStopPrinterStateTracking: ${printerId.localId}")
-        trackingJob?.cancel()
-        trackingJob = null
+        trackingJobs.remove(printerId.localId)?.cancel()
     }
 
     override fun onDestroy() {
         Log.d(TAG, "onDestroy")
+        trackingJobs.values.forEach { it.cancel() }
+        trackingJobs.clear()
         scope.cancel()
     }
 
@@ -94,10 +131,6 @@ class AkPrinterDiscoverySession(
         return result
     }
 
-    private fun buildPrinterInfoWithCapabilities(printerId: PrinterId, printerData: org.json.JSONObject): PrinterInfo {
-        return buildPrinterInfo(printerId, printerData, PrinterInfo.STATUS_IDLE, withCapabilities = true)
-    }
-
     private fun buildPrinterInfo(
         printerId: PrinterId,
         printerData: org.json.JSONObject,
@@ -106,8 +139,14 @@ class AkPrinterDiscoverySession(
     ): PrinterInfo {
         val name = printerData.optString("name", "AkPrint Printer")
         val paperWidth = printerData.optInt("paperWidth", 80)
+        val description = when (printerData.optString("type")) {
+            "bluetooth" -> "Bluetooth (${printerData.optString("address", "")})"
+            "lan" -> "LAN (${printerData.optString("host", "")}:${printerData.optInt("port", 9100)})"
+            else -> "ESC/POS Printer"
+        }
 
         val builder = PrinterInfo.Builder(printerId, name, status)
+            .setDescription(description)
 
         if (withCapabilities) {
             builder.setCapabilities(buildCapabilities(printerId, paperWidth))

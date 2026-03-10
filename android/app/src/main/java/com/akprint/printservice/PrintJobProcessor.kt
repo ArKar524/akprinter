@@ -1,7 +1,6 @@
 package com.akprint.printservice
 
 import android.content.Context
-import android.print.PrintJobInfo
 import android.printservice.PrintJob
 import android.util.Log
 import com.akprint.drivers.BluetoothEscPosDriver
@@ -38,12 +37,26 @@ object PrintJobProcessor {
             return
         }
 
+        val printerName = printerData.optString("name")
         val settings = loadSettings(context)
+
+        // Read document data and page count BEFORE any state transitions
+        // (document data may become unavailable after certain state changes)
+        val pfd = printJob.document.data
+        if (pfd == null) {
+            printJob.fail("No document data")
+            return
+        }
+
+        val pageCount = printJob.document.info?.pageCount ?: 1
+
+        printJob.setStatus("Connecting to $printerName...")
         val driver = buildDriver(printerData)
 
         if (!driver.connect()) {
+            pfd.close()
             printJob.fail("Could not connect to printer")
-            appendLog(context, "error", "Connect failed: ${printerData.optString("name")}")
+            appendLog(context, "error", "Connect failed: $printerName")
             appendHistory(context, printerData, 0, startTime, false, "Connection failed")
             return
         }
@@ -51,14 +64,10 @@ object PrintJobProcessor {
         try {
             emitEvent(context, "PrintJobStarted", JSONObject().apply {
                 put("jobId", printJob.id.toString())
-                put("printerName", printerData.optString("name"))
+                put("printerName", printerName)
             })
 
-            val pfd = printJob.document.data
-            if (pfd == null) {
-                printJob.fail("No document data")
-                return
-            }
+            printJob.setStatus("Converting document...")
 
             val escPosData: ByteArray
             try {
@@ -80,17 +89,18 @@ object PrintJobProcessor {
                 pfd.close()
             }
 
+            printJob.setStatus("Sending to printer...")
             val sendOk = driver.send(escPosData)
 
             if (sendOk) {
                 printJob.complete()
                 val duration = System.currentTimeMillis() - startTime
-                appendLog(context, "info", "Job completed: ${printerData.optString("name")}")
-                appendHistory(context, printerData, printJob.document.info?.pageCount ?: 1, startTime, true, null)
+                appendLog(context, "info", "Job completed: $printerName")
+                appendHistory(context, printerData, pageCount, startTime, true, null)
                 emitEvent(context, "PrintJobCompleted", JSONObject().apply {
                     put("jobId", printJob.id.toString())
-                    put("printerName", printerData.optString("name"))
-                    put("pageCount", printJob.document.info?.pageCount ?: 1)
+                    put("printerName", printerName)
+                    put("pageCount", pageCount)
                     put("duration", duration)
                 })
             } else {
@@ -99,9 +109,12 @@ object PrintJobProcessor {
                 val retryCount = settings.optInt("retryCount", 3)
 
                 if (retryOnFailure) {
+                    // Transition to BLOCKED — temporarily unable to print, will retry
+                    printJob.block("Retrying...")
                     var retried = false
                     for (attempt in 1..retryCount) {
                         Log.d(TAG, "Retry attempt $attempt/$retryCount")
+                        printJob.setStatus("Retry $attempt/$retryCount...")
                         driver.disconnect()
                         Thread.sleep(1000L * attempt)
                         if (driver.connect() && driver.send(escPosData)) {
@@ -111,8 +124,8 @@ object PrintJobProcessor {
                     }
                     if (retried) {
                         printJob.complete()
-                        appendLog(context, "info", "Job completed after retry: ${printerData.optString("name")}")
-                        appendHistory(context, printerData, printJob.document.info?.pageCount ?: 1, startTime, true, null)
+                        appendLog(context, "info", "Job completed after retry: $printerName")
+                        appendHistory(context, printerData, pageCount, startTime, true, null)
                     } else {
                         failJob(context, printJob, printerData, startTime, "Send failed after $retryCount retries")
                     }
