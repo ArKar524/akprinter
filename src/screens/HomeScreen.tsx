@@ -1,10 +1,11 @@
-import React, {useEffect} from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import {
   ScrollView,
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
+  AppState,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import type {HomeNavProp} from '../navigation/types';
@@ -13,7 +14,7 @@ import {usePrintHistory} from '../hooks/usePrintHistory';
 import {usePrinterStatus} from '../hooks/usePrinterStatus';
 import {PrinterCard} from '../components/PrinterCard';
 import {SectionHeader} from '../components/SectionHeader';
-import {PrinterIcn, SettingsIcn, HistoryIcn, FileIcn, CheckCircleIcn, CancelIcn} from '../components/Icons';
+import {PrinterIcn, SettingsIcn, HistoryIcn, FileIcn, CheckCircleIcn, CancelIcn, AlertIcn} from '../components/Icons';
 import {PrinterBridge} from '../services/PrinterBridge';
 import {formatDate, formatDuration} from '../utils/formatters';
 
@@ -22,6 +23,21 @@ export function HomeScreen() {
   const {printers, defaultPrinter, refresh} = usePrinters();
   const {history} = usePrintHistory();
   const {status} = usePrinterStatus(defaultPrinter?.id ?? null);
+  const [printServiceEnabled, setPrintServiceEnabled] = useState<boolean | null>(null);
+
+  const checkPrintService = useCallback(() => {
+    PrinterBridge.isPrintServiceEnabled().then(setPrintServiceEnabled).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    checkPrintService();
+    const sub = AppState.addEventListener('change', state => {
+      if (state === 'active') {
+        checkPrintService();
+      }
+    });
+    return () => sub.remove();
+  }, [checkPrintService]);
 
   useEffect(() => {
     const sub = PrinterBridge.onPrintJobCompleted(() => refresh());
@@ -32,6 +48,22 @@ export function HomeScreen() {
 
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+      {/* Print Service Warning */}
+      {printServiceEnabled === false && (
+        <TouchableOpacity
+          style={styles.serviceBanner}
+          onPress={() => PrinterBridge.openPrintServiceSettings()}
+          activeOpacity={0.7}>
+          <AlertIcn size={20} color="#92400e" />
+          <View style={styles.serviceBannerText}>
+            <Text style={styles.serviceBannerTitle}>Print service not enabled</Text>
+            <Text style={styles.serviceBannerDesc}>
+              Tap to open Settings and enable AkPrint
+            </Text>
+          </View>
+        </TouchableOpacity>
+      )}
+
       {/* Default Printer Card */}
       <SectionHeader title="Default Printer" />
       <View style={styles.section}>
@@ -147,6 +179,31 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingBottom: 32,
+  },
+  serviceBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fef3c7',
+    marginHorizontal: 16,
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#fcd34d',
+  },
+  serviceBannerText: {
+    marginLeft: 10,
+    flex: 1,
+  },
+  serviceBannerTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#92400e',
+  },
+  serviceBannerDesc: {
+    fontSize: 12,
+    color: '#a16207',
+    marginTop: 2,
   },
   section: {
     marginHorizontal: 16,

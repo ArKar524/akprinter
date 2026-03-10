@@ -8,6 +8,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
+import android.print.PrintManager
+import android.provider.Settings
 import android.util.Log
 import com.akprint.drivers.BluetoothEscPosDriver
 import com.akprint.drivers.LanEscPosDriver
@@ -388,6 +390,39 @@ class PrinterModule(reactContext: ReactApplicationContext) :
             } catch (e: Exception) {
                 promise.resolve("offline")
             }
+        }
+    }
+
+    // --- Print Service Status ---
+
+    @ReactMethod
+    fun isPrintServiceEnabled(promise: Promise) {
+        try {
+            val printManager = reactApplicationContext.getSystemService(Context.PRINT_SERVICE) as? PrintManager
+            if (printManager == null) {
+                promise.resolve(false)
+                return
+            }
+            val enabledServices = printManager.printServices
+            val isEnabled = enabledServices?.any {
+                it.id.flattenToString().startsWith("com.akprint/")
+            } ?: false
+            promise.resolve(isEnabled)
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to check print service status", e)
+            promise.resolve(false)
+        }
+    }
+
+    @ReactMethod
+    fun openPrintServiceSettings(promise: Promise) {
+        try {
+            val intent = Intent(Settings.ACTION_PRINT_SETTINGS)
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            reactApplicationContext.startActivity(intent)
+            promise.resolve(null)
+        } catch (e: Exception) {
+            promise.reject("SETTINGS_ERROR", "Could not open print settings", e)
         }
     }
 

@@ -9,6 +9,7 @@ import {
   File01Icon,
   CheckmarkCircle02Icon,
   Cancel01Icon,
+  Alert01Icon,
 } from '@hugeicons/core-free-icons';
 
 interface IconProps {
@@ -46,4 +47,8 @@ export function CheckCircleIcn({size = 24, color = '#000'}: IconProps) {
 
 export function CancelIcn({size = 24, color = '#000'}: IconProps) {
   return <HugeiconsIcon icon={Cancel01Icon} size={size} color={color} />;
+}
+
+export function AlertIcn({size = 24, color = '#000'}: IconProps) {
+  return <HugeiconsIcon icon={Alert01Icon} size={size} color={color} />;
 }

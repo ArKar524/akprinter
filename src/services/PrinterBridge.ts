@@ -74,6 +74,14 @@ export const PrinterBridge = {
     return PrinterModule.checkPrinterStatus(printerId);
   },
 
+  isPrintServiceEnabled(): Promise<boolean> {
+    return PrinterModule.isPrintServiceEnabled();
+  },
+
+  openPrintServiceSettings(): Promise<void> {
+    return PrinterModule.openPrintServiceSettings();
+  },
+
   onPrintJobStarted(
     callback: (data: {jobId: string; printerName: string}) => void,
   ) {
