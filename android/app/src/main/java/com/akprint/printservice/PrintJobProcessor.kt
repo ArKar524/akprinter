@@ -22,7 +22,10 @@ object PrintJobProcessor {
 
     fun processJob(context: Context, printJob: PrintJob) {
         val startTime = System.currentTimeMillis()
-        val printerIdLocal = printJob.info.printerId.localId
+        val printerIdLocal = printJob.info.printerId?.localId ?: run {
+            printJob.fail("No printer ID")
+            return
+        }
         val printerData = findPrinter(context, printerIdLocal)
 
         if (printerData == null) {
