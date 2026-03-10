@@ -7,22 +7,13 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
-import {HugeiconsIcon} from '@hugeicons/react-native';
-import {
-  PrinterIcon,
-  Settings02Icon,
-  WorkHistoryIcon,
-  FileTextIcon,
-  CheckmarkCircle02Icon,
-  Cancel01Icon,
-} from '@hugeicons/core-free-icons';
-import type {IconSvgElement} from '@hugeicons/core-free-icons';
 import type {HomeNavProp} from '../navigation/types';
 import {usePrinters} from '../hooks/usePrinters';
 import {usePrintHistory} from '../hooks/usePrintHistory';
 import {usePrinterStatus} from '../hooks/usePrinterStatus';
 import {PrinterCard} from '../components/PrinterCard';
 import {SectionHeader} from '../components/SectionHeader';
+import {PrinterIcn, SettingsIcn, HistoryIcn, FileIcn, CheckCircleIcn, CancelIcn} from '../components/Icons';
 import {PrinterBridge} from '../services/PrinterBridge';
 import {formatDate, formatDuration} from '../utils/formatters';
 
@@ -62,27 +53,23 @@ export function HomeScreen() {
       <View style={styles.actionsRow}>
         <QuickAction
           label="Printers"
-          icon={PrinterIcon}
-          color="#2563eb"
+          icon={<PrinterIcn size={26} color="#2563eb" />}
           onPress={() => navigation.navigate('PrintersList')}
           badge={printers.length > 0 ? String(printers.length) : undefined}
         />
         <QuickAction
           label="Settings"
-          icon={Settings02Icon}
-          color="#6b7280"
+          icon={<SettingsIcn size={26} color="#6b7280" />}
           onPress={() => navigation.navigate('Settings')}
         />
         <QuickAction
           label="History"
-          icon={WorkHistoryIcon}
-          color="#d97706"
+          icon={<HistoryIcn size={26} color="#d97706" />}
           onPress={() => navigation.navigate('PrintHistory')}
         />
         <QuickAction
           label="Logs"
-          icon={FileTextIcon}
-          color="#16a34a"
+          icon={<FileIcn size={26} color="#16a34a" />}
           onPress={() => navigation.navigate('Logs')}
         />
       </View>
@@ -102,11 +89,10 @@ export function HomeScreen() {
             {recentHistory.map(entry => (
               <View key={entry.id} style={styles.historyRow}>
                 <View style={[styles.historyLeft, {backgroundColor: entry.success ? '#dcfce7' : '#fee2e2'}]}>
-                  <HugeiconsIcon
-                    icon={entry.success ? CheckmarkCircle02Icon : Cancel01Icon}
-                    size={16}
-                    color={entry.success ? '#16a34a' : '#dc2626'}
-                  />
+                  {entry.success
+                    ? <CheckCircleIcn size={16} color="#16a34a" />
+                    : <CancelIcn size={16} color="#dc2626" />
+                  }
                 </View>
                 <View style={styles.historyInfo}>
                   <Text style={styles.historyPrinter} numberOfLines={1}>
@@ -132,20 +118,18 @@ export function HomeScreen() {
 function QuickAction({
   label,
   icon,
-  color,
   onPress,
   badge,
 }: {
   label: string;
-  icon: IconSvgElement;
-  color: string;
+  icon: React.ReactNode;
   onPress: () => void;
   badge?: string;
 }) {
   return (
     <TouchableOpacity style={styles.action} onPress={onPress} activeOpacity={0.7}>
       <View style={styles.actionIcon}>
-        <HugeiconsIcon icon={icon} size={26} color={color} />
+        {icon}
         {badge && (
           <View style={styles.badge}>
             <Text style={styles.badgeText}>{badge}</Text>

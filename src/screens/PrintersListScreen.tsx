@@ -1,9 +1,8 @@
 import React from 'react';
 import {FlatList, View, StyleSheet, TouchableOpacity, Text} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
-import {HugeiconsIcon} from '@hugeicons/react-native';
-import {PrinterIcon} from '@hugeicons/core-free-icons';
 import type {PrintersListNavProp} from '../navigation/types';
+import {PrinterIcn} from '../components/Icons';
 import {usePrinters} from '../hooks/usePrinters';
 import {usePrinterStatus} from '../hooks/usePrinterStatus';
 import {PrinterCard} from '../components/PrinterCard';
@@ -44,7 +43,7 @@ export function PrintersListScreen() {
         ListEmptyComponent={
           loading ? null : (
             <EmptyState
-              icon={<HugeiconsIcon icon={PrinterIcon} size={48} color="#9ca3af" />}
+              icon={<PrinterIcn size={48} color="#9ca3af" />}
               message="No printers added yet. Add a Bluetooth or LAN printer to get started."
             />
           )

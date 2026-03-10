@@ -7,12 +7,7 @@ import {
   StyleSheet,
   Alert,
 } from 'react-native';
-import {HugeiconsIcon} from '@hugeicons/react-native';
-import {
-  CheckmarkCircle02Icon,
-  Cancel01Icon,
-  WorkHistoryIcon,
-} from '@hugeicons/core-free-icons';
+import {CheckCircleIcn, CancelIcn, HistoryIcn} from '../components/Icons';
 import {usePrintHistory} from '../hooks/usePrintHistory';
 import {EmptyState} from '../components/EmptyState';
 import {formatDate, formatDuration} from '../utils/formatters';
@@ -23,11 +18,11 @@ function HistoryRow({entry}: {entry: PrintHistoryEntry}) {
   return (
     <View style={styles.row}>
       <View style={[styles.statusIcon, {backgroundColor: success ? '#dcfce7' : '#fee2e2'}]}>
-        <HugeiconsIcon
-          icon={success ? CheckmarkCircle02Icon : Cancel01Icon}
-          size={18}
-          color={success ? '#16a34a' : '#dc2626'}
-        />
+        {success ? (
+          <CheckCircleIcn size={18} color="#16a34a" />
+        ) : (
+          <CancelIcn size={18} color="#dc2626" />
+        )}
       </View>
       <View style={styles.info}>
         <Text style={styles.printerName} numberOfLines={1}>
@@ -89,7 +84,7 @@ export function PrintHistoryScreen() {
       ListHeaderComponent={totalJobs > 0 ? <Header /> : null}
       ListEmptyComponent={
         loading ? null : (
-          <EmptyState icon={<HugeiconsIcon icon={WorkHistoryIcon} size={48} color="#9ca3af" />} message="No print history yet." />
+          <EmptyState icon={<HistoryIcn size={48} color="#9ca3af" />} message="No print history yet." />
         )
       }
       refreshing={loading}
