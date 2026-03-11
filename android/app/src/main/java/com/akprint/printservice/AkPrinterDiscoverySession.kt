@@ -6,6 +6,7 @@ import android.print.PrinterId
 import android.print.PrinterInfo
 import android.printservice.PrinterDiscoverySession
 import android.util.Log
+import com.akprint.escpos.EscPosConverter
 import kotlinx.coroutines.*
 import org.json.JSONArray
 
@@ -156,13 +157,23 @@ class AkPrinterDiscoverySession(
     }
 
     private fun buildCapabilities(printerId: PrinterId, paperWidthMm: Int): PrinterCapabilitiesInfo {
-        val mediaSize = when {
-            paperWidthMm >= 100 -> PrintAttributes.MediaSize("receipt_104mm", "Receipt 104mm", 4094, 11693)
-            paperWidthMm >= 70  -> PrintAttributes.MediaSize("receipt_80mm",  "Receipt 80mm",  3150, 11693)
-            else                -> PrintAttributes.MediaSize("receipt_58mm",  "Receipt 58mm",  2283, 11693)
-        }
+        // Read DPI from settings so the media size exactly matches the printer's
+        // printable area. This ensures Android renders the PDF at the correct width
+        // and content fills the full page with no scaling mismatch.
+        val settings = PrintJobProcessor.loadSettings(service)
+        val dpi = settings.optInt("dpi", 203)
+        val widthDots = EscPosConverter.targetWidthDots(paperWidthMm, dpi)
+        // Convert dots → mils (1 mil = 1/1000 inch): dots / dpi * 1000
+        val widthMils = (widthDots * 1000 + dpi / 2) / dpi  // integer rounding
+        val heightMils = 11693 // ~297mm — enough for any receipt
 
-        val resolution = PrintAttributes.Resolution("203dpi", "203 DPI", 203, 203)
+        val mediaSizeId = when {
+            paperWidthMm >= 100 -> "receipt_104mm"
+            paperWidthMm >= 70  -> "receipt_80mm"
+            else                -> "receipt_58mm"
+        }
+        val mediaSize = PrintAttributes.MediaSize(mediaSizeId, "${paperWidthMm}mm Receipt", widthMils, heightMils)
+        val resolution = PrintAttributes.Resolution("${dpi}dpi", "$dpi DPI", dpi, dpi)
 
         return PrinterCapabilitiesInfo.Builder(printerId)
             .addMediaSize(mediaSize, true)
