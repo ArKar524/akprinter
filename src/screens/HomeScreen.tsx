@@ -83,7 +83,7 @@ export function HomeScreen() {
           <View style={styles.serviceBannerText}>
             <Text style={styles.serviceBannerTitle}>Print service not enabled</Text>
             <Text style={styles.serviceBannerDesc}>
-              Tap to open Settings and enable AkPrint
+              Tap to open Settings and enable Pico Printer
             </Text>
           </View>
         </TouchableOpacity>

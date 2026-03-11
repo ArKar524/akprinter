@@ -44,7 +44,7 @@ abstract class BaseIntentPrintActivity : AppCompatActivity() {
         convertData: suspend () -> ByteArray?
     ) {
         progressDialog = AlertDialog.Builder(this)
-            .setTitle("AkPrint")
+            .setTitle("Pico Printer")
             .setMessage("Preparing...")
             .setCancelable(false)
             .setNegativeButton("Cancel") { _, _ ->
@@ -66,7 +66,7 @@ abstract class BaseIntentPrintActivity : AppCompatActivity() {
                 val printers = PrintJobProcessor.loadPrinters(this@BaseIntentPrintActivity)
                 val printerData = findDefaultPrinterInArray(printers)
                 if (printerData == null) {
-                    showError("No printer configured.\nAdd a printer in AkPrint first.")
+                    showError("No printer configured.\nAdd a printer in Pico Printer first.")
                     return@launch
                 }
 

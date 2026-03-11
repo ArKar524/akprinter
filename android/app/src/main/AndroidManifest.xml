@@ -37,7 +37,7 @@
       <!-- Share PDF → print directly to default printer -->
       <activity
         android:name=".intents.IntentPdfActivity"
-        android:label="AkPrint PDF"
+        android:label="Pico Printer PDF"
         android:excludeFromRecents="true"
         android:exported="true"
         android:theme="@style/Theme.AppCompat.Light.Dialog.Alert"
@@ -59,7 +59,7 @@
       <!-- Share Image → print directly to default printer -->
       <activity
         android:name=".intents.IntentImageActivity"
-        android:label="AkPrint Image"
+        android:label="Pico Printer Image"
         android:excludeFromRecents="true"
         android:exported="true"
         android:theme="@style/Theme.AppCompat.Light.Dialog.Alert"
@@ -81,7 +81,7 @@
       <!-- Share Text → print directly to default printer -->
       <activity
         android:name=".intents.IntentTextActivity"
-        android:label="AkPrint Text"
+        android:label="Pico Printer Text"
         android:excludeFromRecents="true"
         android:exported="true"
         android:theme="@style/Theme.AppCompat.Light.Dialog.Alert"

@@ -227,7 +227,7 @@ object EscPosConverter {
         result.add(EscPosCommands.TEXT_ALIGN_CENTER)
         result.add(EscPosCommands.TEXT_BOLD_ON)
         result.add(EscPosCommands.TEXT_DOUBLE_HEIGHT_ON)
-        result.add("AkPrint\n".toByteArray(Charsets.UTF_8))
+        result.add("Pico Printer\n".toByteArray(Charsets.UTF_8))
         result.add(EscPosCommands.TEXT_SIZE_NORMAL)
         result.add(EscPosCommands.TEXT_BOLD_OFF)
         result.add("Test Page\n".toByteArray(Charsets.UTF_8))

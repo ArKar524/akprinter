@@ -31,7 +31,7 @@ class IntentTextActivity : BaseIntentPrintActivity() {
 
         val printer = findDefaultPrinter()
         if (printer == null) {
-            android.widget.Toast.makeText(this, "No printer configured. Add a printer in AkPrint first.", android.widget.Toast.LENGTH_LONG).show()
+            android.widget.Toast.makeText(this, "No printer configured. Add a printer in Pico Printer first.", android.widget.Toast.LENGTH_LONG).show()
             finish()
             return
         }

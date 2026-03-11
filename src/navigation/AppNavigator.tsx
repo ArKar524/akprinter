@@ -26,7 +26,7 @@ export function AppNavigator() {
           headerShadowVisible: false,
           contentStyle: {backgroundColor: '#f3f4f6'},
         }}>
-        <Stack.Screen name="Home" component={HomeScreen} options={{title: 'AkPrint'}} />
+        <Stack.Screen name="Home" component={HomeScreen} options={{title: 'Pico Printer'}} />
         <Stack.Screen
           name="PrintersList"
           component={PrintersListScreen}

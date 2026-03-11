@@ -30,7 +30,7 @@ async function requestBluetoothPermissions(): Promise<boolean> {
     {
       title: 'Location Permission',
       message:
-        'AkPrint needs location access to discover nearby Bluetooth printers.',
+        'Pico Printer needs location access to discover nearby Bluetooth printers.',
       buttonPositive: 'Allow',
       buttonNegative: 'Deny',
     },

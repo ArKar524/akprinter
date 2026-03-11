@@ -138,7 +138,7 @@ class AkPrinterDiscoverySession(
         status: Int,
         withCapabilities: Boolean
     ): PrinterInfo {
-        val name = printerData.optString("name", "AkPrint Printer")
+        val name = printerData.optString("name", "Pico Printer")
         val paperWidth = printerData.optInt("paperWidth", 80)
         val description = when (printerData.optString("type")) {
             "bluetooth" -> "Bluetooth (${printerData.optString("address", "")})"

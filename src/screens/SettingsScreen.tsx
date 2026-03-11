@@ -72,11 +72,11 @@ export function SettingsScreen() {
             )}
             <View style={styles.serviceText}>
               <Text style={styles.serviceTitle}>
-                {serviceEnabled ? 'AkPrint is enabled' : 'AkPrint is not enabled'}
+                {serviceEnabled ? 'Pico Printer is enabled' : 'Pico Printer is not enabled'}
               </Text>
               {!serviceEnabled && (
                 <Text style={styles.serviceDesc}>
-                  Enable AkPrint in Android print settings to print from any app
+                  Enable Pico Printer in Android print settings to print from any app
                 </Text>
               )}
             </View>
