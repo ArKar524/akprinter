@@ -450,20 +450,11 @@ class PrinterModule(reactContext: ReactApplicationContext) :
     fun isPrintServiceEnabled(promise: Promise) {
         try {
             val pkg = reactApplicationContext.packageName
-            val isEnabled = if (Build.VERSION.SDK_INT >= 31) {
-                // API 31+: getEnabledPrintServices() is a public API
-                val pm = reactApplicationContext
-                    .getSystemService(android.print.PrintManager::class.java)
-                pm?.enabledPrintServices?.any { it.componentName.packageName == pkg } == true
-            } else {
-                // API 24-30: read from secure settings
-                val enabled = Settings.Secure.getString(
-                    reactApplicationContext.contentResolver,
-                    "enabled_print_services"
-                )
-                enabled?.contains(pkg) == true
-            }
-            promise.resolve(isEnabled)
+            val enabled = Settings.Secure.getString(
+                reactApplicationContext.contentResolver,
+                "enabled_print_services"
+            )
+            promise.resolve(enabled?.contains(pkg) == true)
         } catch (e: Exception) {
             Log.w(TAG, "Failed to check print service status", e)
             promise.resolve(false)
