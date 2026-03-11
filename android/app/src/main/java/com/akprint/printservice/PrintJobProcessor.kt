@@ -71,7 +71,7 @@ object PrintJobProcessor {
 
             val escPosData: ByteArray
             try {
-                val paperWidth = printerData.optInt("paperWidth", settings.optInt("paperWidth", 80))
+                val paperWidth = settings.optInt("paperWidth", printerData.optInt("paperWidth", 80))
                 val copies = printJob.info.copies.coerceAtLeast(1).let {
                     if (it == 1) settings.optInt("copies", 1) else it
                 }
@@ -293,7 +293,7 @@ object PrintJobProcessor {
         val pfd = ParcelFileDescriptor.open(pdfFile, ParcelFileDescriptor.MODE_READ_ONLY)
         val escPosData: ByteArray
         try {
-            val paperWidth = printerData.optInt("paperWidth", settings.optInt("paperWidth", 80))
+            val paperWidth = settings.optInt("paperWidth", printerData.optInt("paperWidth", 80))
             val actualCopies = if (copies == 1) settings.optInt("copies", 1) else copies
             val autoCutMode = settings.optString("autoCutMode", "partial")
             val cashDrawerMode = settings.optString("cashDrawerMode", "none")
@@ -456,7 +456,7 @@ object PrintJobProcessor {
         val pfd = ParcelFileDescriptor.open(pdfFile, ParcelFileDescriptor.MODE_READ_ONLY)
         val escPosData: ByteArray
         try {
-            val paperWidth = printerData.optInt("paperWidth", settings.optInt("paperWidth", 80))
+            val paperWidth = settings.optInt("paperWidth", printerData.optInt("paperWidth", 80))
             val copies = settings.optInt("copies", 1)
             val autoCutMode = settings.optString("autoCutMode", "partial")
             val cashDrawerMode = settings.optString("cashDrawerMode", "none")
