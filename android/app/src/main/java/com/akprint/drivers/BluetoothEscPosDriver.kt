@@ -17,7 +17,8 @@ class BluetoothEscPosDriver(
     companion object {
         private const val TAG = "BtEscPosDriver"
         private val SPP_UUID: UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")
-        private const val CHUNK_SIZE = 4096
+        private const val CHUNK_SIZE = 512
+        private const val INTER_CHUNK_DELAY_MS = 20L
     }
 
     private var socket: BluetoothSocket? = null
@@ -54,6 +55,9 @@ class BluetoothEscPosDriver(
                 os.write(data, offset, length)
                 os.flush()
                 offset += length
+                // Small delay between chunks — cheap BT printers have small receive
+                // buffers and drop bytes if sent too fast, causing garbled output
+                if (offset < data.size) Thread.sleep(INTER_CHUNK_DELAY_MS)
             }
             true
         } catch (e: IOException) {
