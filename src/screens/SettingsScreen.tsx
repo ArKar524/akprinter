@@ -6,7 +6,7 @@ import {SectionHeader} from '../components/SectionHeader';
 import {AlertIcn, CheckCircleIcn} from '../components/Icons';
 import {PrinterBridge} from '../services/PrinterBridge';
 import type {PaperWidth} from '../types/printer';
-import type {AutoCutMode, CashDrawerMode} from '../types/settings';
+import type {AutoCutMode, CashDrawerMode, ImageMode} from '../types/settings';
 import {PAPER_WIDTHS} from '../utils/constants';
 
 const AUTO_CUT_OPTIONS: {value: AutoCutMode; label: string}[] = [
@@ -24,6 +24,11 @@ const CASH_DRAWER_OPTIONS: {value: CashDrawerMode; label: string}[] = [
 const DPI_OPTIONS: {value: 180 | 203; label: string}[] = [
   {value: 203, label: '203'},
   {value: 180, label: '180'},
+];
+
+const IMAGE_MODE_OPTIONS: {value: ImageMode; label: string}[] = [
+  {value: 'threshold', label: 'Threshold'},
+  {value: 'dither', label: 'Dither'},
 ];
 
 export function SettingsScreen() {
@@ -148,6 +153,30 @@ export function SettingsScreen() {
                   style={[
                     styles.segBtnText,
                     settings.dpi === opt.value && styles.segBtnTextActive,
+                  ]}>
+                  {opt.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        <View style={styles.row}>
+          <Text style={styles.label}>Image Mode</Text>
+          <View style={styles.segmented}>
+            {IMAGE_MODE_OPTIONS.map(opt => (
+              <TouchableOpacity
+                key={opt.value}
+                style={[
+                  styles.segBtn,
+                  settings.imageMode === opt.value && styles.segBtnActive,
+                ]}
+                onPress={() => updateSettings({imageMode: opt.value})}
+                activeOpacity={0.7}>
+                <Text
+                  style={[
+                    styles.segBtnText,
+                    settings.imageMode === opt.value && styles.segBtnTextActive,
                   ]}>
                   {opt.label}
                 </Text>

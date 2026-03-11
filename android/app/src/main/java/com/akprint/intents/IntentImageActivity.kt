@@ -46,6 +46,7 @@ class IntentImageActivity : BaseIntentPrintActivity() {
         val autoCutMode = settings.optString("autoCutMode", "partial")
         val cashDrawerMode = settings.optString("cashDrawerMode", "none")
         val linesBeforeCut = settings.optInt("linesBeforeCut", 4)
+        val useDither = settings.optString("imageMode", "threshold") == "dither"
         val printerName = printer.optString("name", "Printer")
 
         startPrinting(printerName) {
@@ -59,7 +60,7 @@ class IntentImageActivity : BaseIntentPrintActivity() {
             try {
                 val parts = mutableListOf<ByteArray>()
                 parts.add(EscPosCommands.INIT)
-                parts.add(EscPosConverter.bitmapToEscPosRaster(bitmap, targetWidthDots))
+                parts.add(EscPosConverter.bitmapToEscPosRaster(bitmap, targetWidthDots, useDither))
                 if (linesBeforeCut > 0) parts.add(EscPosCommands.feedLines(linesBeforeCut))
                 when (autoCutMode) {
                     "full"    -> parts.add(EscPosCommands.CUT_FULL)

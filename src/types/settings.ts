@@ -2,6 +2,7 @@ import type {PaperWidth} from './printer';
 
 export type AutoCutMode = 'none' | 'partial' | 'full';
 export type CashDrawerMode = 'none' | 'drawer1' | 'drawer2';
+export type ImageMode = 'threshold' | 'dither';
 
 export interface AppSettings {
   defaultPrinterId: string | null;
@@ -12,6 +13,7 @@ export interface AppSettings {
   linesBeforeCut: number;
   disconnectDelay: number;
   dpi: 180 | 203;
+  imageMode: ImageMode;
   retryOnFailure: boolean;
   retryCount: number;
   debugLogging: boolean;
@@ -26,6 +28,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   linesBeforeCut: 4,
   disconnectDelay: 3,
   dpi: 203,
+  imageMode: 'threshold',
   retryOnFailure: true,
   retryCount: 3,
   debugLogging: false,

@@ -44,6 +44,7 @@ class IntentPdfActivity : BaseIntentPrintActivity() {
         val cashDrawerMode = settings.optString("cashDrawerMode", "none")
         val linesBeforeCut = settings.optInt("linesBeforeCut", 4)
         val dpi = settings.optInt("dpi", 203)
+        val useDither = settings.optString("imageMode", "threshold") == "dither"
         val printerName = printer.optString("name", "Printer")
 
         startPrinting(printerName) {
@@ -57,7 +58,8 @@ class IntentPdfActivity : BaseIntentPrintActivity() {
                     autoCutMode = autoCutMode,
                     cashDrawerMode = cashDrawerMode,
                     linesBeforeCut = linesBeforeCut,
-                    dpi = dpi
+                    dpi = dpi,
+                    useDither = useDither
                 )
             } finally {
                 pfd.close()

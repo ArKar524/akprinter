@@ -32,21 +32,25 @@ object EscPosConverter {
         autoCutMode: String = "partial",
         cashDrawerMode: String = "none",
         linesBeforeCut: Int = 4,
-        dpi: Int = 203
+        dpi: Int = 203,
+        useDither: Boolean = false,
+        onPageProgress: ((pageIndex: Int, totalPages: Int) -> Unit)? = null
     ): ByteArray {
         val result = mutableListOf<ByteArray>()
         val pdfRenderer = PdfRenderer(pfd)
         val widthDots = targetWidthDots(paperWidthMm, dpi)
 
         try {
+            val totalPages = pdfRenderer.pageCount
             repeat(copies) { copyIndex ->
                 result.add(EscPosCommands.INIT)
 
-                for (pageIndex in 0 until pdfRenderer.pageCount) {
+                for (pageIndex in 0 until totalPages) {
+                    onPageProgress?.invoke(pageIndex, totalPages)
                     val page = pdfRenderer.openPage(pageIndex)
                     try {
                         val bitmap = renderPageToBitmap(page, widthDots)
-                        result.add(bitmapToEscPosRaster(bitmap, widthDots))
+                        result.add(bitmapToEscPosRaster(bitmap, widthDots, useDither))
                         bitmap.recycle()
                     } finally {
                         page.close()
@@ -90,7 +94,7 @@ object EscPosConverter {
         return bitmap
     }
 
-    fun bitmapToEscPosRaster(bitmap: Bitmap, targetWidthDots: Int): ByteArray {
+    fun bitmapToEscPosRaster(bitmap: Bitmap, targetWidthDots: Int, useDither: Boolean = false): ByteArray {
         val scaledBitmap = if (bitmap.width != targetWidthDots) {
             val aspectRatio = bitmap.height.toFloat() / bitmap.width.toFloat()
             val targetHeight = (targetWidthDots * aspectRatio).toInt().coerceAtLeast(1)
@@ -102,21 +106,25 @@ object EscPosConverter {
         val widthBytes = (widthDots + 7) / 8
 
         val header = EscPosCommands.rasterImageHeader(widthBytes, heightDots)
-        val pixelData = monochromePixelData(scaledBitmap, widthDots, heightDots, widthBytes)
+        val pixelData = if (useDither) {
+            ditherPixelData(scaledBitmap, widthDots, heightDots, widthBytes)
+        } else {
+            thresholdPixelData(scaledBitmap, widthDots, heightDots, widthBytes)
+        }
 
         if (scaledBitmap !== bitmap) scaledBitmap.recycle()
 
         return header + pixelData
     }
 
-    private fun monochromePixelData(
+    // Simple luminance threshold: dark pixels (< 128) → print dot
+    private fun thresholdPixelData(
         bitmap: Bitmap,
         widthDots: Int,
         heightDots: Int,
         widthBytes: Int
     ): ByteArray {
         val data = ByteArray(widthBytes * heightDots)
-
         for (y in 0 until heightDots) {
             for (byteIndex in 0 until widthBytes) {
                 var b = 0
@@ -124,17 +132,63 @@ object EscPosConverter {
                     val x = byteIndex * 8 + bit
                     if (x < widthDots) {
                         val pixel = bitmap.getPixel(x, y)
-                        val luminance = (0.299 * Color.red(pixel) +
-                                0.587 * Color.green(pixel) +
-                                0.114 * Color.blue(pixel)).toInt()
-                        // Dark pixel (luminance < 128) → print dot (bit = 1)
-                        if (luminance < 128) b = b or (0x80 shr bit)
+                        val lum = (0.299 * Color.red(pixel) +
+                                   0.587 * Color.green(pixel) +
+                                   0.114 * Color.blue(pixel)).toInt()
+                        if (lum < 128) b = b or (0x80 shr bit)
                     }
                 }
                 data[y * widthBytes + byteIndex] = b.toByte()
             }
         }
+        return data
+    }
 
+    // Floyd-Steinberg dithering — better quality for photos and gradients
+    private fun ditherPixelData(
+        bitmap: Bitmap,
+        widthDots: Int,
+        heightDots: Int,
+        widthBytes: Int
+    ): ByteArray {
+        // Copy luminance values into a float buffer for error diffusion
+        val lum = FloatArray(widthDots * heightDots)
+        for (y in 0 until heightDots) {
+            for (x in 0 until widthDots) {
+                val pixel = bitmap.getPixel(x, y)
+                lum[y * widthDots + x] = (0.299f * Color.red(pixel) +
+                                          0.587f * Color.green(pixel) +
+                                          0.114f * Color.blue(pixel))
+            }
+        }
+
+        val data = ByteArray(widthBytes * heightDots)
+        for (y in 0 until heightDots) {
+            for (byteIndex in 0 until widthBytes) {
+                var b = 0
+                for (bit in 0 until 8) {
+                    val x = byteIndex * 8 + bit
+                    if (x < widthDots) {
+                        val idx = y * widthDots + x
+                        val old = lum[idx]
+                        val newVal = if (old < 128f) 0f else 255f
+                        val err = old - newVal
+                        lum[idx] = newVal
+
+                        // Distribute error to neighbors (Floyd-Steinberg weights)
+                        if (x + 1 < widthDots)                        lum[idx + 1]            += err * 7f / 16f
+                        if (y + 1 < heightDots) {
+                            if (x - 1 >= 0)                            lum[idx + widthDots - 1] += err * 3f / 16f
+                                                                       lum[idx + widthDots]     += err * 5f / 16f
+                            if (x + 1 < widthDots)                     lum[idx + widthDots + 1] += err * 1f / 16f
+                        }
+
+                        if (newVal == 0f) b = b or (0x80 shr bit)
+                    }
+                }
+                data[y * widthBytes + byteIndex] = b.toByte()
+            }
+        }
         return data
     }
 

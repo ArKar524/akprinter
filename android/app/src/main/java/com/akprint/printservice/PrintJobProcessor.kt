@@ -79,6 +79,7 @@ object PrintJobProcessor {
                 val cashDrawerMode = settings.optString("cashDrawerMode", "none")
                 val linesBeforeCut = settings.optInt("linesBeforeCut", 4)
                 val dpi = settings.optInt("dpi", 203)
+                val useDither = settings.optString("imageMode", "threshold") == "dither"
 
                 escPosData = EscPosConverter.pdfToEscPos(
                     pfd = pfd,
@@ -87,7 +88,11 @@ object PrintJobProcessor {
                     autoCutMode = autoCutMode,
                     cashDrawerMode = cashDrawerMode,
                     linesBeforeCut = linesBeforeCut,
-                    dpi = dpi
+                    dpi = dpi,
+                    useDither = useDither,
+                    onPageProgress = { pageIndex, totalPages ->
+                        printJob.setStatus("Converting page ${pageIndex + 1}/$totalPages...")
+                    }
                 )
             } finally {
                 pfd.close()
@@ -333,6 +338,7 @@ object PrintJobProcessor {
             val cashDrawerMode = settings.optString("cashDrawerMode", "none")
             val linesBeforeCut = settings.optInt("linesBeforeCut", 4)
             val dpi = settings.optInt("dpi", 203)
+            val useDither = settings.optString("imageMode", "threshold") == "dither"
 
             escPosData = EscPosConverter.pdfToEscPos(
                 pfd = pfd,
@@ -341,7 +347,8 @@ object PrintJobProcessor {
                 autoCutMode = autoCutMode,
                 cashDrawerMode = cashDrawerMode,
                 linesBeforeCut = linesBeforeCut,
-                dpi = dpi
+                dpi = dpi,
+                useDither = useDither
             )
         } finally {
             pfd.close()
