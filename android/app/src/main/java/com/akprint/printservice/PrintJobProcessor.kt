@@ -21,7 +21,7 @@ import java.util.UUID
 object PrintJobProcessor {
 
     private const val TAG = "PrintJobProcessor"
-    private const val PREFS_NAME = "akprint_prefs"
+    const val PREFS_NAME = "akprint_prefs"
 
     fun processJob(context: Context, printJob: PrintJob) {
         val startTime = System.currentTimeMillis()

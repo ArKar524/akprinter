@@ -1,5 +1,6 @@
 package com.akprint.printservice
 
+import android.content.Context
 import android.printservice.PrintJob
 import android.printservice.PrintService
 import android.printservice.PrinterDiscoverySession
@@ -13,6 +14,7 @@ class AkPrintService : PrintService() {
 
     companion object {
         private const val TAG = "AkPrintService"
+        const val PREF_SERVICE_ENABLED = "service_enabled"
 
         // Pending events queue — consumed by PrinterModule when RN is active
         val pendingEvents = ConcurrentLinkedQueue<Pair<String, JSONObject>>()
@@ -25,10 +27,14 @@ class AkPrintService : PrintService() {
 
     override fun onConnected() {
         Log.d(TAG, "onConnected — print service bound by system")
+        getSharedPreferences(PrintJobProcessor.PREFS_NAME, Context.MODE_PRIVATE)
+            .edit().putBoolean(PREF_SERVICE_ENABLED, true).apply()
     }
 
     override fun onDisconnected() {
         Log.d(TAG, "onDisconnected — print service unbound by system")
+        getSharedPreferences(PrintJobProcessor.PREFS_NAME, Context.MODE_PRIVATE)
+            .edit().putBoolean(PREF_SERVICE_ENABLED, false).apply()
         // Cancel all in-flight jobs since the service is being disconnected
         activeJobs.values.forEach { it.cancel() }
         activeJobs.clear()
