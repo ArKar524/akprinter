@@ -1,6 +1,6 @@
 import type {PaperWidth, PrinterStatus} from '../types/printer';
 
-export const PAPER_WIDTHS: PaperWidth[] = [58, 80];
+export const PAPER_WIDTHS: PaperWidth[] = [58, 80, 104];
 export const DEFAULT_LAN_PORT = 9100;
 export const BLUETOOTH_SCAN_DURATION_MS = 12000;
 export const STATUS_POLL_INTERVAL_MS = 30000;
@@ -10,6 +10,7 @@ export const MAX_HISTORY_ENTRIES = 1000;
 export const PAPER_WIDTH_DOTS: Record<PaperWidth, number> = {
   58: 384,
   80: 576,
+  104: 832,
 };
 
 export const PRINTER_STATUS_LABELS: Record<PrinterStatus, string> = {

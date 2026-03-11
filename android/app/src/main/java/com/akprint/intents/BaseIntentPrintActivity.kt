@@ -79,6 +79,9 @@ abstract class BaseIntentPrintActivity : AppCompatActivity() {
                 try {
                     updateMessage("Printing to $printerName...")
                     if (driver.send(escPosData)) {
+                        val disconnectDelayMs = PrintJobProcessor.loadSettings(this@BaseIntentPrintActivity)
+                            .optInt("disconnectDelay", 3) * 1000L
+                        if (disconnectDelayMs > 0) delay(disconnectDelayMs)
                         withContext(Dispatchers.Main) {
                             progressDialog?.dismiss()
                             Toast.makeText(this@BaseIntentPrintActivity, "Sent to $printerName", Toast.LENGTH_SHORT).show()

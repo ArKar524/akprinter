@@ -41,13 +41,11 @@ class IntentImageActivity : BaseIntentPrintActivity() {
 
         val settings = loadSettings()
         val paperWidth = printer.optInt("paperWidth", 80)
-        val targetWidthDots = when {
-            paperWidth >= 100 -> EscPosCommands.DOTS_104MM
-            paperWidth >= 70  -> EscPosCommands.DOTS_80MM
-            else              -> EscPosCommands.DOTS_58MM
-        }
-        val autoCut = settings.optBoolean("autoCut", true)
-        val openCashDrawer = settings.optBoolean("openCashDrawer", false)
+        val dpi = settings.optInt("dpi", 203)
+        val targetWidthDots = EscPosConverter.targetWidthDots(paperWidth, dpi)
+        val autoCutMode = settings.optString("autoCutMode", "partial")
+        val cashDrawerMode = settings.optString("cashDrawerMode", "none")
+        val linesBeforeCut = settings.optInt("linesBeforeCut", 4)
         val printerName = printer.optString("name", "Printer")
 
         startPrinting(printerName) {
@@ -62,9 +60,15 @@ class IntentImageActivity : BaseIntentPrintActivity() {
                 val parts = mutableListOf<ByteArray>()
                 parts.add(EscPosCommands.INIT)
                 parts.add(EscPosConverter.bitmapToEscPosRaster(bitmap, targetWidthDots))
-                parts.add(EscPosCommands.feedLines(4))
-                if (autoCut) parts.add(EscPosCommands.CUT_PARTIAL)
-                if (openCashDrawer) parts.add(EscPosCommands.CASH_DRAWER_PIN2)
+                if (linesBeforeCut > 0) parts.add(EscPosCommands.feedLines(linesBeforeCut))
+                when (autoCutMode) {
+                    "full"    -> parts.add(EscPosCommands.CUT_FULL)
+                    "partial" -> parts.add(EscPosCommands.CUT_PARTIAL)
+                }
+                when (cashDrawerMode) {
+                    "drawer1" -> parts.add(EscPosCommands.CASH_DRAWER_PIN2)
+                    "drawer2" -> parts.add(EscPosCommands.CASH_DRAWER_PIN5)
+                }
 
                 val total = parts.sumOf { it.size }
                 val merged = ByteArray(total)

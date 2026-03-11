@@ -9,41 +9,59 @@ import android.os.ParcelFileDescriptor
 
 object EscPosConverter {
 
-    private const val PRINTER_DPI = 203
+    fun targetWidthDots(paperWidthMm: Int, dpi: Int): Int {
+        return if (dpi == 180) {
+            when {
+                paperWidthMm >= 100 -> EscPosCommands.DOTS_104MM_180DPI
+                paperWidthMm >= 70  -> EscPosCommands.DOTS_80MM_180DPI
+                else                -> EscPosCommands.DOTS_58MM_180DPI
+            }
+        } else {
+            when {
+                paperWidthMm >= 100 -> EscPosCommands.DOTS_104MM
+                paperWidthMm >= 70  -> EscPosCommands.DOTS_80MM
+                else                -> EscPosCommands.DOTS_58MM
+            }
+        }
+    }
 
     fun pdfToEscPos(
         pfd: ParcelFileDescriptor,
         paperWidthMm: Int,
         copies: Int = 1,
-        autoCut: Boolean = true,
-        openCashDrawer: Boolean = false
+        autoCutMode: String = "partial",
+        cashDrawerMode: String = "none",
+        linesBeforeCut: Int = 4,
+        dpi: Int = 203
     ): ByteArray {
         val result = mutableListOf<ByteArray>()
         val pdfRenderer = PdfRenderer(pfd)
+        val widthDots = targetWidthDots(paperWidthMm, dpi)
 
         try {
-            val targetWidthDots = when {
-                paperWidthMm >= 100 -> EscPosCommands.DOTS_104MM
-                paperWidthMm >= 70  -> EscPosCommands.DOTS_80MM
-                else                -> EscPosCommands.DOTS_58MM
-            }
-
             repeat(copies) { copyIndex ->
                 result.add(EscPosCommands.INIT)
 
                 for (pageIndex in 0 until pdfRenderer.pageCount) {
                     val page = pdfRenderer.openPage(pageIndex)
                     try {
-                        val bitmap = renderPageToBitmap(page, targetWidthDots)
-                        result.add(bitmapToEscPosRaster(bitmap, targetWidthDots))
+                        val bitmap = renderPageToBitmap(page, widthDots)
+                        result.add(bitmapToEscPosRaster(bitmap, widthDots))
                         bitmap.recycle()
                     } finally {
                         page.close()
                     }
                 }
 
-                if (autoCut) result.add(EscPosCommands.CUT_PARTIAL)
-                if (openCashDrawer) result.add(EscPosCommands.CASH_DRAWER_PIN2)
+                if (linesBeforeCut > 0) result.add(EscPosCommands.feedLines(linesBeforeCut))
+                when (autoCutMode) {
+                    "full"    -> result.add(EscPosCommands.CUT_FULL)
+                    "partial" -> result.add(EscPosCommands.CUT_PARTIAL)
+                }
+                when (cashDrawerMode) {
+                    "drawer1" -> result.add(EscPosCommands.CASH_DRAWER_PIN2)
+                    "drawer2" -> result.add(EscPosCommands.CASH_DRAWER_PIN5)
+                }
 
                 // Feed lines between copies (not after last)
                 if (copyIndex < copies - 1) result.add(EscPosCommands.feedLines(3))
@@ -120,7 +138,7 @@ object EscPosConverter {
         return data
     }
 
-    fun buildTestPage(printerName: String, paperWidthMm: Int): ByteArray {
+    fun buildTestPage(printerName: String, paperWidthMm: Int, dpi: Int = 203): ByteArray {
         val result = mutableListOf<ByteArray>()
         val separator = "--------------------------------\n"
 
@@ -136,7 +154,7 @@ object EscPosConverter {
         result.add(EscPosCommands.TEXT_ALIGN_LEFT)
         result.add("Printer: $printerName\n".toByteArray(Charsets.UTF_8))
         result.add("Paper: ${paperWidthMm}mm\n".toByteArray(Charsets.UTF_8))
-        result.add("DPI: 203\n".toByteArray(Charsets.UTF_8))
+        result.add("DPI: $dpi\n".toByteArray(Charsets.UTF_8))
         result.add(separator.toByteArray(Charsets.UTF_8))
         result.add(EscPosCommands.TEXT_ALIGN_CENTER)
         result.add("Print OK\n".toByteArray(Charsets.UTF_8))

@@ -37,8 +37,9 @@ class IntentTextActivity : BaseIntentPrintActivity() {
         }
 
         val settings = loadSettings()
-        val autoCut = settings.optBoolean("autoCut", true)
-        val openCashDrawer = settings.optBoolean("openCashDrawer", false)
+        val autoCutMode = settings.optString("autoCutMode", "partial")
+        val cashDrawerMode = settings.optString("cashDrawerMode", "none")
+        val linesBeforeCut = settings.optInt("linesBeforeCut", 4)
         val printerName = printer.optString("name", "Printer")
 
         startPrinting(printerName) {
@@ -48,9 +49,15 @@ class IntentTextActivity : BaseIntentPrintActivity() {
             // Ensure text ends with a newline
             val printText = if (text.endsWith("\n")) text else "$text\n"
             parts.add(printText.toByteArray(Charsets.UTF_8))
-            parts.add(EscPosCommands.feedLines(4))
-            if (autoCut) parts.add(EscPosCommands.CUT_PARTIAL)
-            if (openCashDrawer) parts.add(EscPosCommands.CASH_DRAWER_PIN2)
+            if (linesBeforeCut > 0) parts.add(EscPosCommands.feedLines(linesBeforeCut))
+            when (autoCutMode) {
+                "full"    -> parts.add(EscPosCommands.CUT_FULL)
+                "partial" -> parts.add(EscPosCommands.CUT_PARTIAL)
+            }
+            when (cashDrawerMode) {
+                "drawer1" -> parts.add(EscPosCommands.CASH_DRAWER_PIN2)
+                "drawer2" -> parts.add(EscPosCommands.CASH_DRAWER_PIN5)
+            }
 
             val total = parts.sumOf { it.size }
             val merged = ByteArray(total)

@@ -270,9 +270,11 @@ class PrinterModule(reactContext: ReactApplicationContext) :
                 }
 
                 try {
+                    val settings = PrintJobProcessor.loadSettings(reactApplicationContext)
                     val testData = EscPosConverter.buildTestPage(
                         printerData.getString("name"),
-                        printerData.optInt("paperWidth", 80)
+                        printerData.optInt("paperWidth", 80),
+                        settings.optInt("dpi", 203)
                     )
                     if (driver.send(testData)) {
                         PrintJobProcessor.appendLog(reactApplicationContext, "info", "Test print OK: ${printerData.getString("name")}", printerId)

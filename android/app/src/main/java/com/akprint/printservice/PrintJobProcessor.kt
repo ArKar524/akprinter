@@ -75,15 +75,19 @@ object PrintJobProcessor {
                 val copies = printJob.info.copies.coerceAtLeast(1).let {
                     if (it == 1) settings.optInt("copies", 1) else it
                 }
-                val autoCut = settings.optBoolean("autoCut", true)
-                val openCashDrawer = settings.optBoolean("openCashDrawer", false)
+                val autoCutMode = settings.optString("autoCutMode", "partial")
+                val cashDrawerMode = settings.optString("cashDrawerMode", "none")
+                val linesBeforeCut = settings.optInt("linesBeforeCut", 4)
+                val dpi = settings.optInt("dpi", 203)
 
                 escPosData = EscPosConverter.pdfToEscPos(
                     pfd = pfd,
                     paperWidthMm = paperWidth,
                     copies = copies,
-                    autoCut = autoCut,
-                    openCashDrawer = openCashDrawer
+                    autoCutMode = autoCutMode,
+                    cashDrawerMode = cashDrawerMode,
+                    linesBeforeCut = linesBeforeCut,
+                    dpi = dpi
                 )
             } finally {
                 pfd.close()
@@ -137,6 +141,10 @@ object PrintJobProcessor {
             Log.e(TAG, "Error processing job", e)
             failJob(context, printJob, printerData, startTime, e.message ?: "Unknown error")
         } finally {
+            val disconnectDelayMs = settings.optInt("disconnectDelay", 3) * 1000L
+            if (disconnectDelayMs > 0) {
+                try { Thread.sleep(disconnectDelayMs) } catch (_: InterruptedException) {}
+            }
             driver.disconnect()
         }
     }
@@ -321,15 +329,19 @@ object PrintJobProcessor {
         try {
             val paperWidth = printerData.optInt("paperWidth", settings.optInt("paperWidth", 80))
             val copies = settings.optInt("copies", 1)
-            val autoCut = settings.optBoolean("autoCut", true)
-            val openCashDrawer = settings.optBoolean("openCashDrawer", false)
+            val autoCutMode = settings.optString("autoCutMode", "partial")
+            val cashDrawerMode = settings.optString("cashDrawerMode", "none")
+            val linesBeforeCut = settings.optInt("linesBeforeCut", 4)
+            val dpi = settings.optInt("dpi", 203)
 
             escPosData = EscPosConverter.pdfToEscPos(
                 pfd = pfd,
                 paperWidthMm = paperWidth,
                 copies = copies,
-                autoCut = autoCut,
-                openCashDrawer = openCashDrawer
+                autoCutMode = autoCutMode,
+                cashDrawerMode = cashDrawerMode,
+                linesBeforeCut = linesBeforeCut,
+                dpi = dpi
             )
         } finally {
             pfd.close()
@@ -346,6 +358,10 @@ object PrintJobProcessor {
             }
             return false
         } finally {
+            val disconnectDelayMs = settings.optInt("disconnectDelay", 3) * 1000L
+            if (disconnectDelayMs > 0) {
+                try { Thread.sleep(disconnectDelayMs) } catch (_: InterruptedException) {}
+            }
             driver.disconnect()
         }
     }

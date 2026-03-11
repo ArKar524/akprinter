@@ -40,8 +40,10 @@ class IntentPdfActivity : BaseIntentPrintActivity() {
         val settings = loadSettings()
         val paperWidth = printer.optInt("paperWidth", 80)
         val copies = settings.optInt("copies", 1).coerceAtLeast(1)
-        val autoCut = settings.optBoolean("autoCut", true)
-        val openCashDrawer = settings.optBoolean("openCashDrawer", false)
+        val autoCutMode = settings.optString("autoCutMode", "partial")
+        val cashDrawerMode = settings.optString("cashDrawerMode", "none")
+        val linesBeforeCut = settings.optInt("linesBeforeCut", 4)
+        val dpi = settings.optInt("dpi", 203)
         val printerName = printer.optString("name", "Printer")
 
         startPrinting(printerName) {
@@ -52,8 +54,10 @@ class IntentPdfActivity : BaseIntentPrintActivity() {
                     pfd = pfd,
                     paperWidthMm = paperWidth,
                     copies = copies,
-                    autoCut = autoCut,
-                    openCashDrawer = openCashDrawer
+                    autoCutMode = autoCutMode,
+                    cashDrawerMode = cashDrawerMode,
+                    linesBeforeCut = linesBeforeCut,
+                    dpi = dpi
                 )
             } finally {
                 pfd.close()

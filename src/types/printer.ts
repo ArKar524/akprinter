@@ -1,6 +1,6 @@
 export type PrinterType = 'bluetooth' | 'lan';
 export type PrinterStatus = 'online' | 'offline' | 'connecting' | 'unknown';
-export type PaperWidth = 58 | 80;
+export type PaperWidth = 58 | 80 | 104;
 
 export interface BluetoothDevice {
   name: string;
