@@ -156,12 +156,12 @@ class AkPrinterDiscoverySession(
         return builder.build()
     }
 
-    private fun buildCapabilities(printerId: PrinterId, paperWidthMm: Int): PrinterCapabilitiesInfo {
-        // Read DPI from settings so the media size exactly matches the printer's
-        // printable area. This ensures Android renders the PDF at the correct width
-        // and content fills the full page with no scaling mismatch.
+    private fun buildCapabilities(printerId: PrinterId, printerWidthMm: Int): PrinterCapabilitiesInfo {
+        // Read DPI and paper width from settings so media size reflects what will
+        // actually be printed. Settings always override per-printer defaults.
         val settings = PrintJobProcessor.loadSettings(service)
         val dpi = settings.optInt("dpi", 203)
+        val paperWidthMm = settings.optInt("paperWidth", printerWidthMm)
         val widthDots = EscPosConverter.targetWidthDots(paperWidthMm, dpi)
         // Convert dots → mils (1 mil = 1/1000 inch): dots / dpi * 1000
         val widthMils = (widthDots * 1000 + dpi / 2) / dpi  // integer rounding
