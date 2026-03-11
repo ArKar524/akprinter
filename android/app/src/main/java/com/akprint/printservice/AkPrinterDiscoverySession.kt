@@ -168,11 +168,11 @@ class AkPrinterDiscoverySession(
         val heightMils = 11693 // ~297mm — enough for any receipt
 
         val mediaSizeId = when {
-            paperWidthMm >= 100 -> "receipt_104mm"
-            paperWidthMm >= 70  -> "receipt_80mm"
-            else                -> "receipt_58mm"
+            paperWidthMm >= 100 -> "thermal_104mm"
+            paperWidthMm >= 70  -> "thermal_80mm"
+            else                -> "thermal_58mm"
         }
-        val mediaSize = PrintAttributes.MediaSize(mediaSizeId, "${paperWidthMm}mm Receipt", widthMils, heightMils)
+        val mediaSize = PrintAttributes.MediaSize(mediaSizeId, "${paperWidthMm}mm Thermal", widthMils, heightMils)
         val resolution = PrintAttributes.Resolution("${dpi}dpi", "$dpi DPI", dpi, dpi)
 
         return PrinterCapabilitiesInfo.Builder(printerId)
