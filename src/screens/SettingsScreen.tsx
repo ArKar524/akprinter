@@ -1,5 +1,5 @@
 import React, {useCallback, useEffect, useState} from 'react';
-import {ScrollView, View, Text, Switch, TouchableOpacity, StyleSheet, AppState} from 'react-native';
+import {ScrollView, RefreshControl, View, Text, Switch, TouchableOpacity, StyleSheet, AppState} from 'react-native';
 import {useSettings} from '../hooks/useSettings';
 import {ListItem} from '../components/ListItem';
 import {SectionHeader} from '../components/SectionHeader';
@@ -32,7 +32,7 @@ const IMAGE_MODE_OPTIONS: {value: ImageMode; label: string}[] = [
 ];
 
 export function SettingsScreen() {
-  const {settings, loading, updateSettings} = useSettings();
+  const {settings, loading, updateSettings, reload} = useSettings();
   const [serviceEnabled, setServiceEnabled] = useState<boolean | null>(null);
 
   const checkService = useCallback(() => {
@@ -54,7 +54,12 @@ export function SettingsScreen() {
   }
 
   return (
-    <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.scroll}
+      contentContainerStyle={styles.content}
+      refreshControl={
+        <RefreshControl refreshing={loading} onRefresh={() => { reload(); checkService(); }} />
+      }>
       {/* Print Service */}
       <SectionHeader title="Print Service" />
       <View style={styles.section}>

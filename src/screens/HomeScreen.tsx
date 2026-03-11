@@ -1,6 +1,7 @@
 import React, {useCallback, useEffect, useState} from 'react';
 import {
   ScrollView,
+  RefreshControl,
   View,
   Text,
   StyleSheet,
@@ -20,8 +21,8 @@ import {formatDate, formatDuration} from '../utils/formatters';
 
 export function HomeScreen() {
   const navigation = useNavigation<HomeNavProp>();
-  const {printers, defaultPrinter, refresh} = usePrinters();
-  const {history} = usePrintHistory();
+  const {printers, defaultPrinter, loading: printersLoading, refresh} = usePrinters();
+  const {history, refresh: refreshHistory} = usePrintHistory();
   const {status} = usePrinterStatus(defaultPrinter?.id ?? null);
   const [printServiceEnabled, setPrintServiceEnabled] = useState<boolean | null>(null);
   const [pendingCount, setPendingCount] = useState(0);
@@ -33,6 +34,13 @@ export function HomeScreen() {
   const loadPendingCount = useCallback(() => {
     PrinterBridge.getPendingJobs().then(jobs => setPendingCount(jobs.length)).catch(() => {});
   }, []);
+
+  const handleRefresh = useCallback(() => {
+    refresh();
+    refreshHistory();
+    checkPrintService();
+    loadPendingCount();
+  }, [refresh, refreshHistory, checkPrintService, loadPendingCount]);
 
   useEffect(() => {
     checkPrintService();
@@ -59,7 +67,12 @@ export function HomeScreen() {
   const recentHistory = history.slice(0, 3);
 
   return (
-    <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.scroll}
+      contentContainerStyle={styles.content}
+      refreshControl={
+        <RefreshControl refreshing={printersLoading} onRefresh={handleRefresh} />
+      }>
       {/* Print Service Warning */}
       {printServiceEnabled === false && (
         <TouchableOpacity

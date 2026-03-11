@@ -91,7 +91,34 @@ object EscPosConverter {
         canvas.drawColor(Color.WHITE)
 
         page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_PRINT)
-        return bitmap
+
+        // Crop trailing whitespace so short content doesn't waste paper
+        val cropped = cropBottomWhitespace(bitmap)
+        if (cropped !== bitmap) bitmap.recycle()
+        return cropped
+    }
+
+    private fun cropBottomWhitespace(bitmap: Bitmap, paddingDots: Int = 16): Bitmap {
+        val w = bitmap.width
+        val h = bitmap.height
+        val pixels = IntArray(w * h)
+        bitmap.getPixels(pixels, 0, w, 0, 0, w, h)
+
+        var lastContentRow = 0
+        outer@ for (y in h - 1 downTo 0) {
+            for (x in 0 until w) {
+                val p = pixels[y * w + x]
+                val lum = (0.299f * Color.red(p) + 0.587f * Color.green(p) + 0.114f * Color.blue(p)).toInt()
+                if (lum < 250) {
+                    lastContentRow = y
+                    break@outer
+                }
+            }
+        }
+
+        val newH = (lastContentRow + 1 + paddingDots).coerceAtMost(h)
+        if (newH >= h) return bitmap
+        return Bitmap.createBitmap(bitmap, 0, 0, w, newH)
     }
 
     fun bitmapToEscPosRaster(bitmap: Bitmap, targetWidthDots: Int, useDither: Boolean = false): ByteArray {
