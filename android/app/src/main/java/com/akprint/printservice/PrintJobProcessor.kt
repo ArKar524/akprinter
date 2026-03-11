@@ -262,6 +262,130 @@ object PrintJobProcessor {
         AkPrintService.pendingEvents.add(Pair(eventName, data))
     }
 
+    /**
+     * Print from a previously saved PDF file. Called after the PrintJob has already been
+     * completed from the system's perspective (ESC app pattern: complete immediately, print
+     * in background). Errors are emitted as events, not via printJob.fail().
+     */
+    fun processJobFromFile(
+        context: Context,
+        jobId: String,
+        printerLocalId: String,
+        pdfFile: File,
+        pageCount: Int,
+        copies: Int,
+        startTime: Long
+    ) {
+        val printerData = findPrinter(context, printerLocalId)
+        if (printerData == null) {
+            appendLog(context, "error", "Printer not found: $printerLocalId")
+            emitEvent(context, "PrintJobFailed", JSONObject().apply {
+                put("jobId", jobId)
+                put("error", "Printer not found")
+            })
+            pdfFile.delete()
+            return
+        }
+
+        val printerName = printerData.optString("name")
+        val settings = loadSettings(context)
+
+        val pfd = ParcelFileDescriptor.open(pdfFile, ParcelFileDescriptor.MODE_READ_ONLY)
+        val escPosData: ByteArray
+        try {
+            val paperWidth = printerData.optInt("paperWidth", settings.optInt("paperWidth", 80))
+            val actualCopies = if (copies == 1) settings.optInt("copies", 1) else copies
+            val autoCutMode = settings.optString("autoCutMode", "partial")
+            val cashDrawerMode = settings.optString("cashDrawerMode", "none")
+            val linesBeforeCut = settings.optInt("linesBeforeCut", 4)
+            val dpi = settings.optInt("dpi", 203)
+            val useDither = settings.optString("imageMode", "threshold") == "dither"
+
+            escPosData = EscPosConverter.pdfToEscPos(
+                pfd = pfd,
+                paperWidthMm = paperWidth,
+                copies = actualCopies,
+                autoCutMode = autoCutMode,
+                cashDrawerMode = cashDrawerMode,
+                linesBeforeCut = linesBeforeCut,
+                dpi = dpi,
+                useDither = useDither
+            )
+        } finally {
+            pfd.close()
+            pdfFile.delete()
+        }
+
+        emitEvent(context, "PrintJobStarted", JSONObject().apply {
+            put("jobId", jobId)
+            put("printerName", printerName)
+        })
+
+        val driver = buildDriver(printerData)
+        if (!driver.connect()) {
+            appendLog(context, "error", "Connect failed: $printerName")
+            appendHistory(context, printerData, 0, startTime, false, "Connection failed")
+            emitEvent(context, "PrintJobFailed", JSONObject().apply {
+                put("jobId", jobId)
+                put("error", "Could not connect to printer")
+            })
+            return
+        }
+
+        try {
+            val retryOnFailure = settings.optBoolean("retryOnFailure", true)
+            val retryCount = settings.optInt("retryCount", 3)
+            var sendOk = driver.send(escPosData)
+
+            if (!sendOk && retryOnFailure) {
+                for (attempt in 1..retryCount) {
+                    Log.d(TAG, "Retry $attempt/$retryCount for $jobId")
+                    driver.disconnect()
+                    Thread.sleep(1000L * attempt)
+                    if (driver.connect() && driver.send(escPosData)) {
+                        sendOk = true
+                        break
+                    }
+                }
+            }
+
+            val duration = System.currentTimeMillis() - startTime
+            if (sendOk) {
+                appendLog(context, "info", "Job completed: $printerName")
+                appendHistory(context, printerData, pageCount, startTime, true, null)
+                emitEvent(context, "PrintJobCompleted", JSONObject().apply {
+                    put("jobId", jobId)
+                    put("printerName", printerName)
+                    put("pageCount", pageCount)
+                    put("duration", duration)
+                })
+            } else {
+                val reason = if (retryOnFailure) "Send failed after $retryCount retries" else "Send failed"
+                appendLog(context, "error", "Job failed: $reason")
+                appendHistory(context, printerData, 0, startTime, false, reason)
+                emitEvent(context, "PrintJobFailed", JSONObject().apply {
+                    put("jobId", jobId)
+                    put("error", reason)
+                })
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error printing job $jobId", e)
+            val msg = e.message ?: "Unknown error"
+            appendLog(context, "error", "Job error: $msg")
+            appendHistory(context, printerData, 0, startTime, false, msg)
+            emitEvent(context, "PrintJobFailed", JSONObject().apply {
+                put("jobId", jobId)
+                put("error", msg)
+            })
+        } finally {
+            val disconnectDelayMs = settings.optInt("disconnectDelay", 3) * 1000L
+            if (disconnectDelayMs > 0) {
+                try { Thread.sleep(disconnectDelayMs) } catch (_: InterruptedException) {}
+            }
+            driver.disconnect()
+        }
+    }
+
     // --- Pending Jobs ---
 
     fun savePendingJob(context: Context, printJob: PrintJob): Boolean {

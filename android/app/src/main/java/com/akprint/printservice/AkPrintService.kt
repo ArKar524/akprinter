@@ -7,6 +7,9 @@ import android.printservice.PrinterDiscoverySession
 import android.util.Log
 import kotlinx.coroutines.*
 import org.json.JSONObject
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
 
@@ -22,7 +25,7 @@ class AkPrintService : PrintService() {
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    // Track active jobs so we can cancel them from onRequestCancelPrintJob
+    // Track active background print jobs so we can cancel them
     private val activeJobs = ConcurrentHashMap<String, Job>()
 
     override fun onConnected() {
@@ -35,7 +38,6 @@ class AkPrintService : PrintService() {
         Log.d(TAG, "onDisconnected — print service unbound by system")
         getSharedPreferences(PrintJobProcessor.PREFS_NAME, Context.MODE_PRIVATE)
             .edit().putBoolean(PREF_SERVICE_ENABLED, false).apply()
-        // Cancel all in-flight jobs since the service is being disconnected
         activeJobs.values.forEach { it.cancel() }
         activeJobs.clear()
     }
@@ -47,21 +49,73 @@ class AkPrintService : PrintService() {
 
     override fun onPrintJobQueued(printJob: PrintJob) {
         Log.d(TAG, "onPrintJobQueued: ${printJob.id}")
-
-        // Transition to STARTED — we are actively processing the job
         printJob.start()
 
         val jobIdStr = printJob.id.toString()
+        val printerLocalId = printJob.info.printerId?.localId
+        val pageCount = printJob.document.info?.pageCount ?: 1
+        val copies = printJob.info.copies.coerceAtLeast(1)
+        val startTime = System.currentTimeMillis()
+
+        if (printerLocalId == null) {
+            Log.e(TAG, "No printer ID in job $jobIdStr")
+            printJob.fail("No printer ID")
+            return
+        }
+
+        // Save the PDF to disk NOW, while document data is accessible.
+        // We complete() immediately (like the ESC app) so Android never shows
+        // "Print service not enabled" error notifications. Actual printing
+        // happens in a background coroutine; failures are reported via events.
+        val pdfFile = File(filesDir, "print_jobs/$jobIdStr.pdf")
+        pdfFile.parentFile?.mkdirs()
+
+        val pfd = printJob.document.data
+        if (pfd == null) {
+            Log.e(TAG, "No document data for job $jobIdStr")
+            printJob.fail("No document data")
+            return
+        }
+
+        val saved = try {
+            FileInputStream(pfd.fileDescriptor).use { input ->
+                FileOutputStream(pdfFile).use { output -> input.copyTo(output) }
+            }
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to save PDF for job $jobIdStr", e)
+            false
+        } finally {
+            pfd.close()
+        }
+
+        if (!saved) {
+            printJob.fail("Failed to save print data")
+            return
+        }
+
+        // Mark job complete from system's perspective — this prevents any
+        // "Print service not enabled" or "Printer error" system notifications.
+        printJob.complete()
+
+        // Print in background; errors are emitted as PrintJobFailed events.
         val job = scope.launch {
             try {
-                // Print immediately to the target printer, just like a real print service
-                PrintJobProcessor.processJob(this@AkPrintService, printJob)
+                PrintJobProcessor.processJobFromFile(
+                    context = this@AkPrintService,
+                    jobId = jobIdStr,
+                    printerLocalId = printerLocalId,
+                    pdfFile = pdfFile,
+                    pageCount = pageCount,
+                    copies = copies,
+                    startTime = startTime
+                )
             } catch (e: CancellationException) {
                 Log.d(TAG, "Job cancelled: $jobIdStr")
-                try { printJob.cancel() } catch (_: Exception) {}
+                pdfFile.delete()
             } catch (e: Exception) {
-                Log.e(TAG, "Error processing job", e)
-                try { printJob.fail(e.message ?: "Unknown error") } catch (_: Exception) {}
+                Log.e(TAG, "Unhandled error in job $jobIdStr", e)
+                pdfFile.delete()
             } finally {
                 activeJobs.remove(jobIdStr)
             }
@@ -72,17 +126,15 @@ class AkPrintService : PrintService() {
     override fun onRequestCancelPrintJob(printJob: PrintJob) {
         Log.d(TAG, "onRequestCancelPrintJob: ${printJob.id}")
         val jobIdStr = printJob.id.toString()
-
-        // Cancel any in-flight coroutine for this job
         activeJobs[jobIdStr]?.cancel()
         activeJobs.remove(jobIdStr)
-
-        // Cancel the system print job
-        printJob.cancel()
+        // Clean up temp file; job is already complete() so no state change needed
+        File(filesDir, "print_jobs/$jobIdStr.pdf").delete()
     }
 
     override fun onDestroy() {
         Log.d(TAG, "onDestroy")
+        activeJobs.values.forEach { it.cancel() }
         activeJobs.clear()
         scope.cancel()
         super.onDestroy()
