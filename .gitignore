@@ -66,6 +66,10 @@ yarn-error.log
 # testing
 /coverage
 
+# Reference APK and decompiled sources (learning resources only)
+base.apk
+esc/
+
 # Yarn
 .yarn/*
 !.yarn/patches

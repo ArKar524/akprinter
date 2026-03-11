@@ -1,6 +1,5 @@
 package com.akprint.printservice
 
-import android.print.PrinterId
 import android.printservice.PrintJob
 import android.printservice.PrintService
 import android.printservice.PrinterDiscoverySession
@@ -49,28 +48,13 @@ class AkPrintService : PrintService() {
         val jobIdStr = printJob.id.toString()
         val job = scope.launch {
             try {
-                printJob.setStatus("Saving print job...")
-                val saved = PrintJobProcessor.savePendingJob(this@AkPrintService, printJob)
-                if (saved) {
-                    // Job data saved successfully — mark complete
-                    printJob.setStatus("Print job queued")
-                    printJob.complete()
-                    pendingEvents.add(Pair("PendingJobAdded", JSONObject().apply {
-                        put("jobId", jobIdStr)
-                    }))
-                    PrintJobProcessor.appendLog(
-                        this@AkPrintService, "info",
-                        "Print job saved as pending: ${printJob.info.label}"
-                    )
-                } else {
-                    printJob.fail("Failed to save print job")
-                }
+                // Print immediately to the target printer, just like a real print service
+                PrintJobProcessor.processJob(this@AkPrintService, printJob)
             } catch (e: CancellationException) {
-                // Job was cancelled via onRequestCancelPrintJob
                 Log.d(TAG, "Job cancelled: $jobIdStr")
                 try { printJob.cancel() } catch (_: Exception) {}
             } catch (e: Exception) {
-                Log.e(TAG, "Error saving pending job", e)
+                Log.e(TAG, "Error processing job", e)
                 try { printJob.fail(e.message ?: "Unknown error") } catch (_: Exception) {}
             } finally {
                 activeJobs.remove(jobIdStr)
