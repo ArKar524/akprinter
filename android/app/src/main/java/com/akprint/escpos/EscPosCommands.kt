@@ -28,9 +28,10 @@ object EscPosCommands {
         ((heightDots shr 8) and 0xFF).toByte()
     )
 
-    // Dot widths for paper sizes at 203 DPI
-    const val DOTS_58MM = 384
-    const val DOTS_80MM = 576
+    // Dot widths for paper sizes at 203 DPI (203 dots/inch ÷ 25.4 mm/inch × paper width mm)
+    const val DOTS_58MM  = 384   // 58mm
+    const val DOTS_80MM  = 576   // 80mm
+    const val DOTS_104MM = 832   // 104mm
 
     // Test page header bytes (ESC/POS text mode, 8 spaces per tab alignment)
     val TEXT_ALIGN_CENTER: ByteArray = byteArrayOf(ESC, 0x61, 0x01)

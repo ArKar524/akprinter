@@ -1,0 +1,63 @@
+package com.akprint.intents
+
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.os.Bundle
+import com.akprint.escpos.EscPosConverter
+
+class IntentPdfActivity : BaseIntentPrintActivity() {
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        val uri: Uri? = when (intent.action) {
+            Intent.ACTION_SEND -> {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
+                } else {
+                    @Suppress("DEPRECATION")
+                    intent.getParcelableExtra(Intent.EXTRA_STREAM)
+                }
+            }
+            Intent.ACTION_VIEW -> intent.data
+            else -> null
+        }
+
+        if (uri == null) {
+            android.widget.Toast.makeText(this, "No PDF file provided", android.widget.Toast.LENGTH_SHORT).show()
+            finish()
+            return
+        }
+
+        val printer = findDefaultPrinter()
+        if (printer == null) {
+            android.widget.Toast.makeText(this, "No printer configured. Add a printer in AkPrint first.", android.widget.Toast.LENGTH_LONG).show()
+            finish()
+            return
+        }
+
+        val settings = loadSettings()
+        val paperWidth = printer.optInt("paperWidth", 80)
+        val copies = settings.optInt("copies", 1).coerceAtLeast(1)
+        val autoCut = settings.optBoolean("autoCut", true)
+        val openCashDrawer = settings.optBoolean("openCashDrawer", false)
+        val printerName = printer.optString("name", "Printer")
+
+        startPrinting(printerName) {
+            val pfd = contentResolver.openFileDescriptor(uri, "r")
+                ?: throw IllegalStateException("Cannot open PDF")
+            try {
+                EscPosConverter.pdfToEscPos(
+                    pfd = pfd,
+                    paperWidthMm = paperWidth,
+                    copies = copies,
+                    autoCut = autoCut,
+                    openCashDrawer = openCashDrawer
+                )
+            } finally {
+                pfd.close()
+            }
+        }
+    }
+}

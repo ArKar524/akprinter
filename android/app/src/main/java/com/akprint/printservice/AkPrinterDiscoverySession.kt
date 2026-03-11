@@ -156,10 +156,10 @@ class AkPrinterDiscoverySession(
     }
 
     private fun buildCapabilities(printerId: PrinterId, paperWidthMm: Int): PrinterCapabilitiesInfo {
-        val mediaSize = if (paperWidthMm <= 58) {
-            PrintAttributes.MediaSize("receipt_58mm", "Receipt 58mm", 2283, 11693)
-        } else {
-            PrintAttributes.MediaSize("receipt_80mm", "Receipt 80mm", 3150, 11693)
+        val mediaSize = when {
+            paperWidthMm >= 100 -> PrintAttributes.MediaSize("receipt_104mm", "Receipt 104mm", 4094, 11693)
+            paperWidthMm >= 70  -> PrintAttributes.MediaSize("receipt_80mm",  "Receipt 80mm",  3150, 11693)
+            else                -> PrintAttributes.MediaSize("receipt_58mm",  "Receipt 58mm",  2283, 11693)
         }
 
         val resolution = PrintAttributes.Resolution("203dpi", "203 DPI", 203, 203)

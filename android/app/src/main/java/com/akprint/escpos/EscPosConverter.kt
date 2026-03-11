@@ -22,7 +22,11 @@ object EscPosConverter {
         val pdfRenderer = PdfRenderer(pfd)
 
         try {
-            val targetWidthDots = if (paperWidthMm >= 70) EscPosCommands.DOTS_80MM else EscPosCommands.DOTS_58MM
+            val targetWidthDots = when {
+                paperWidthMm >= 100 -> EscPosCommands.DOTS_104MM
+                paperWidthMm >= 70  -> EscPosCommands.DOTS_80MM
+                else                -> EscPosCommands.DOTS_58MM
+            }
 
             repeat(copies) { copyIndex ->
                 result.add(EscPosCommands.INIT)

@@ -1,6 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
@@ -29,6 +31,65 @@
         <intent-filter>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
+        </intent-filter>
+      </activity>
+
+      <!-- Share PDF → print directly to default printer -->
+      <activity
+        android:name=".intents.IntentPdfActivity"
+        android:label="AkPrint PDF"
+        android:excludeFromRecents="true"
+        android:exported="true"
+        android:theme="@style/Theme.AppCompat.Light.Dialog.Alert"
+        android:configChanges="keyboard|keyboardHidden|orientation|screenSize|uiMode">
+        <intent-filter>
+          <action android:name="android.intent.action.SEND" />
+          <category android:name="android.intent.category.DEFAULT" />
+          <data android:mimeType="application/pdf" />
+        </intent-filter>
+        <intent-filter>
+          <action android:name="android.intent.action.VIEW" />
+          <category android:name="android.intent.category.DEFAULT" />
+          <category android:name="android.intent.category.BROWSABLE" />
+          <data android:scheme="content" android:mimeType="application/pdf" />
+          <data android:scheme="file" android:mimeType="application/pdf" />
+        </intent-filter>
+      </activity>
+
+      <!-- Share Image → print directly to default printer -->
+      <activity
+        android:name=".intents.IntentImageActivity"
+        android:label="AkPrint Image"
+        android:excludeFromRecents="true"
+        android:exported="true"
+        android:theme="@style/Theme.AppCompat.Light.Dialog.Alert"
+        android:configChanges="keyboard|keyboardHidden|orientation|screenSize|uiMode">
+        <intent-filter>
+          <action android:name="android.intent.action.SEND" />
+          <category android:name="android.intent.category.DEFAULT" />
+          <data android:mimeType="image/*" />
+        </intent-filter>
+        <intent-filter>
+          <action android:name="android.intent.action.VIEW" />
+          <category android:name="android.intent.category.DEFAULT" />
+          <category android:name="android.intent.category.BROWSABLE" />
+          <data android:scheme="content" android:mimeType="image/*" />
+          <data android:scheme="file" android:mimeType="image/*" />
+        </intent-filter>
+      </activity>
+
+      <!-- Share Text → print directly to default printer -->
+      <activity
+        android:name=".intents.IntentTextActivity"
+        android:label="AkPrint Text"
+        android:excludeFromRecents="true"
+        android:exported="true"
+        android:theme="@style/Theme.AppCompat.Light.Dialog.Alert"
+        android:configChanges="keyboard|keyboardHidden|orientation|screenSize|uiMode">
+        <intent-filter>
+          <action android:name="android.intent.action.SEND" />
+          <category android:name="android.intent.category.DEFAULT" />
+          <data android:mimeType="text/plain" />
         </intent-filter>
       </activity>
 
